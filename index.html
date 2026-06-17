@@ -184,8 +184,9 @@ textarea{resize:vertical;min-height:64px}
     <div class="fr3">
       <div class="field"><label class="fl">Net earnings ($) <small>з Patreon → Payouts</small></label><input type="number" id="i_net" oninput="qS()"></div>
       <div class="field"><label class="fl">Shop gross ($)</label><input type="number" id="i_gross_shop" oninput="qS()"></div>
-      <div class="field"><label class="fl">Bundle продажів (шт)</label><input type="number" id="i_bundle_sales" oninput="qS()"></div>
+      <div class="field"><label class="fl">patreon.vrkings.tv відвідувачів</label><input type="number" id="i_site_visitors" oninput="qS()"></div>
     </div>
+    <div class="field"><label class="fl">Shop деталізація <small>що продалось цього місяця</small></label><input type="text" id="i_shop_detail" placeholder="напр. 2× Bundle $699, 1× VR Twerk Pack" oninput="qS()"></div>
   </div>
   <div class="card">
     <div class="ct">Трафік</div>
@@ -196,11 +197,13 @@ textarea{resize:vertical;min-height:64px}
     </div>
   </div>
   <div class="card">
-    <div class="ct">Контент</div>
-    <div class="fr2">
+    <div class="ct">Контент і трафік</div>
+    <div class="fr3">
       <div class="field"><label class="fl">Відео на Patreon (шт)</label><input type="number" id="i_vids" oninput="qS()"></div>
-      <div class="field"><label class="fl">Нова модель? <small>(1=так)</small></label><input type="number" id="i_newmodel" min="0" max="1" oninput="qS()"></div>
+      <div class="field"><label class="fl">Reddit → Patreon кліки</label><input type="number" id="i_reddit_clicks" oninput="qS()"></div>
+      <div class="field"><label class="fl">YouTube відео — дата <small>(якщо був реліз)</small></label><input type="text" id="i_yt_release" placeholder="напр. 15" oninput="qS()"></div>
     </div>
+    <div class="field"><label class="fl">Результат poll місяця <small>(яка модель перемогла / тема)</small></label><input type="text" id="i_poll_result" placeholder="напр. Liona — VR twerk" oninput="qS()"></div>
   </div>
   <div class="card">
     <div class="ct">Нотатка до місяця</div>
@@ -226,6 +229,19 @@ textarea{resize:vertical;min-height:64px}
     <div class="card"><div class="ct">Churn rate (%)</div><div style="position:relative;height:150px"><canvas id="cChurn"></canvas></div></div>
   </div>
   <div class="card"><div class="ct">YouTube → Patreon кліки</div><div style="position:relative;height:130px"><canvas id="cYT"></canvas></div></div>
+  <div class="two">
+    <div class="card">
+      <div class="ct">patreon.vrkings.tv — відвідувачі/міс</div>
+      <div style="position:relative;height:130px"><canvas id="cSite"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">GA інсайти — що відстежуємо</div>
+      <div class="trow"><span>Звідки трафік</span><span style="font-size:12px;color:var(--text2)">YouTube · Direct · Google · Twitter · Reddit</span></div>
+      <div class="trow"><span>Конверсія кнопок</span><span style="font-size:12px;color:var(--text2)">Events → Join / Shop кліки</span></div>
+      <div class="trow"><span>Найкраща сторінка</span><span style="font-size:12px;color:var(--text2)">Яка конвертує найбільше</span></div>
+      <div class="trow"><span>Дані вносити</span><span style="font-size:12px;color:var(--text2)">1-го числа з GA → поле вище</span></div>
+    </div>
+  </div>
   <div class="card">
     <div class="ct">Таблиця по місяцях</div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -237,7 +253,8 @@ textarea{resize:vertical;min-height:64px}
         <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Churn %</th>
         <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Нових</th>
         <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Відп.</th>
-        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Мод.</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">YT реліз</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Poll</th>
       </tr></thead>
       <tbody id="historyBody"></tbody>
     </table></div>
@@ -319,7 +336,7 @@ const TIERS=['graf','baron','knight','warrior','lord','prince'];
 const TPRICES={graf:15,baron:10,knight:5,warrior:1,lord:7,prince:50};
 const TNAMES={graf:'Graf $15',baron:'Baron $10',knight:'Knight $5',warrior:'Warrior $1',lord:'Lord $7 ⚡',prince:'Prince $50'};
 const TCOLORS={graf:'#1D9E75',baron:'#5DCAA5',knight:'#85B7EB',warrior:'#B4B2A9',lord:'#FAC775',prince:'#EF9F27'};
-const FIELDS=['paid','new_paid','churned','free','new_free','annual','net','gross_shop','bundle_sales','yt_views','yt_clicks','tw_clicks','vids','newmodel','t_graf','t_baron','t_knight','t_warrior','t_lord','t_prince'];
+const FIELDS=['paid','new_paid','churned','free','new_free','annual','net','gross_shop','shop_detail','site_visitors','yt_views','yt_clicks','yt_release','tw_clicks','reddit_clicks','vids','poll_result','t_graf','t_baron','t_knight','t_warrior','t_lord','t_prince'];
 const SL={testing:'В тестуванні',confirmed:'Підтверджено ✓',rejected:'Відкинуто',paused:'Пауза'};
 const SC={testing:'ty',confirmed:'tg',rejected:'tr',paused:'tn'};
 
@@ -440,23 +457,24 @@ function renderPulse(){
   document.getElementById('pulseMetrics').innerHTML=`
     <div class="mc ${mcC(d.paid,500,380)}"><div class="ml">Paid active</div><div class="mv">${d.paid||'—'}</div><div class="ms">${pD!=null?(pD>=0?'▲ +'+pD:'▼ '+pD)+' від поп. міс':'введи дані'}</div></div>
     <div class="mc ${mcC(d.net,6000,4500)}"><div class="ml">Net / міс</div><div class="mv">$${d.net?d.net.toLocaleString():'—'}</div><div class="ms">${nD!=null?(nD>=0?'+$'+nD:'−$'+Math.abs(nD))+' від поп. міс':''}</div></div>
-    <div class="mc ${mcC(c,0,20,true)}"><div class="ml">Churn rate</div><div class="mv">${c!=null?c+'%':'—'}</div><div class="ms">Таргет ≤ 15% · зараз ~28-35%</div></div>
+    <div class="mc ${mcC(c,0,20,true)}"><div class="ml">Churn rate</div><div class="mv">${c!=null?c+'%':'—'}</div><div class="ms">% від paid на початку місяця · таргет ≤ 15%</div></div>
     <div class="mc ${mcC(d.yt_clicks,100,30)}"><div class="ml">YT → Patreon</div><div class="mv">${d.yt_clicks||'—'}</div><div class="ms">кліків / міс</div></div>
-    <div class="mc ${mcC(d.gross_shop,1200,400)}"><div class="ml">Shop / міс</div><div class="mv">$${d.gross_shop||'—'}</div><div class="ms">${d.bundle_sales||0} bundle</div></div>
+    <div class="mc ${mcC(d.gross_shop,1200,400)}"><div class="ml">Shop / міс</div><div class="mv">$${d.gross_shop||'—'}</div><div class="ms">${d.shop_detail||'деталі не внесені'}</div></div>
     <div class="mc ${mcC(d.t_prince,10,8)}"><div class="ml">Prince кити</div><div class="mv">${d.t_prince||'—'}</div><div class="ms">по $50/міс · ${(d.t_prince||0)*50}$ разом</div></div>
   `;
   document.getElementById('goals').innerHTML=`
     <div class="bw"><div class="bm"><span>Paid (ціль 600)</span><span>${d.paid||0}/600</span></div><div class="bt"><div class="bf" style="width:${Math.min(100,Math.round(((d.paid||0)/600)*100))}%;background:#1D9E75"></div></div></div>
-    <div class="bw"><div class="bm"><span>Net/міс (ціль $8,000)</span><span>$${d.net||0}/$8,000</span></div><div class="bt"><div class="bf" style="width:${Math.min(100,Math.round(((d.net||0)/8000)*100))}%;background:#1D9E75"></div></div></div>
+    <div class="bw"><div class="bm"><span>Net/міс (ціль $10,000)</span><span>$${d.net||0}/$10,000</span></div><div class="bt"><div class="bf" style="width:${Math.min(100,Math.round(((d.net||0)/10000)*100))}%;background:#1D9E75"></div></div></div>
     <div class="bw"><div class="bm"><span>Churn (ціль ≤ 15%)</span><span>${c!=null?c+'%':'?'} — зараз критично</span></div><div class="bt"><div class="bf" style="width:${c!=null?Math.min(100,Math.round((c/90)*100)):0}%;background:${c&&c<=15?'#1D9E75':c&&c<=25?'#EF9F27':'#D85A30'}"></div></div></div>
     <div class="bw"><div class="bm"><span>Shop (ціль $1,500)</span><span>$${d.gross_shop||0}/$1,500</span></div><div class="bt"><div class="bf" style="width:${Math.min(100,Math.round(((d.gross_shop||0)/1500)*100))}%;background:#1D9E75"></div></div></div>
   `;
   document.getElementById('channels').innerHTML=`
     <div class="trow"><span>YouTube CTA</span><span><span class="tag ${(d.yt_clicks||0)>=100?'tg':(d.yt_clicks||0)>=50?'ty':'tr'}">${(d.yt_clicks||0)>=100?'Добре':(d.yt_clicks||0)>=50?'Слабо':'Критично'}</span></span></div>
-    <div class="trow"><span>Twitter</span><span><span class="tag ${(d.tw_clicks||0)>=200?'tg':(d.tw_clicks||0)>=50?'ty':'tr'}">${(d.tw_clicks||0)>=200?'Активний':(d.tw_clicks||0)>=50?'Слабо':'Мертвий'}</span></span></div>
+    <div class="trow"><span>Twitter/X</span><span><span class="tag ${(d.tw_clicks||0)>=200?'tg':(d.tw_clicks||0)>=50?'ty':'ty'}">${(d.tw_clicks||0)>=200?'Активний':(d.tw_clicks||0)>=50?'Слабо':'Розігрівається'}</span></span></div>
+    <div class="trow"><span>Reddit r/oculusnsfw</span><span><span class="tag ${(d.reddit_clicks||0)>=50?'tg':(d.reddit_clicks||0)>=10?'ty':'tn'}">${(d.reddit_clicks||0)>=50?'Активний':(d.reddit_clicks||0)>=10?'Є трафік':d.reddit_clicks?d.reddit_clicks+' кліків':'Не відстежується'}</span></span></div>
     <div class="trow"><span>Контент</span><span><span class="tag ${(d.vids||0)>=16?'tg':(d.vids||0)>=12?'ty':'tr'}">${d.vids||0} відео/міс</span></span></div>
     <div class="trow"><span>Annual members</span><span><span class="tag ${(d.annual||0)>=20?'tg':'ty'}">${d.annual||0} людей</span></span></div>
-    <div class="trow"><span>Нова модель</span><span><span class="tag ${d.newmodel?'tg':'tn'}">${d.newmodel?'Так ✓':'Не цього міс'}</span></span></div>
+    <div class="trow"><span>Poll місяця</span><span><span class="tag tn" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.poll_result||'Не проводився'}</span></span></div>
   `;
   const tp=d.paid||0;
   document.getElementById('triggers').innerHTML=`
@@ -468,7 +486,7 @@ function renderPulse(){
   if(c!=null&&c>25)alts.push({t:'red',m:`Churn ${c}% — реальна базова цифра 28-35%/міс. Таргет 15%. Причини невідомі. Запусти exit survey в Patreon → Surveys.`});
   if(tp<480)alts.push({t:'amber',m:`Paid ${tp} — нижче 480. Okoa для free members. Pinned comments. YT CTA голосом.`});
   if((d.yt_clicks||0)<50)alts.push({t:'amber',m:`YouTube → Patreon лише ${d.yt_clicks||0} кліків. CTA голосом у нових відео.`});
-  if(!d.newmodel){const lm=allKeys().slice().reverse().find(k=>months[k]?.newmodel);const ma=lm?allKeys().indexOf(lk())-allKeys().indexOf(lm):99;if(ma>=3)alts.push({t:'amber',m:`Нова модель — ${ma>=99?'невідомо коли':'понад '+ma+' міс тому'}. Листопад 2025 дав +88 paid. Мінімум 1/квартал.`});}
+  if(!d.poll_result)alts.push({t:'amber',m:'Poll цього місяця не проводився. Запусти опитування — яка модель наступна?'});
   if(!alts.length)alts.push({t:'green',m:'Метрики в нормі. Фокус: знизити churn нижче 25% і Bundle CTA в кожному пості.'});
   document.getElementById('pulseAlerts').innerHTML=alts.map(a=>`<div class="ab-box ${a.t}">${a.m}</div>`).join('');
 }
@@ -514,9 +532,23 @@ function renderDynamics(){
   const keys=allKeys();
   const labels=keys.map(k=>k2l(k).replace(' 20','\''));
   mkC('cPaid',labels,keys.map(k=>months[k]?.paid||null));
+  // Позначки YouTube релізів на графіку
+  const ytReleaseMonths=keys.filter(k=>months[k]?.yt_release);
+  if(ytReleaseMonths.length&&chts.cPaid){
+    // додаємо легенду під графіком
+    const ytLegend=ytReleaseMonths.map(k=>`📹 ${k2l(k)}: ${months[k].yt_release}`).join(' · ');
+    const existingNote=document.getElementById('ytReleaseNote');
+    if(existingNote)existingNote.remove();
+    const note=document.createElement('div');
+    note.id='ytReleaseNote';
+    note.style.cssText='font-size:11px;color:var(--text2);padding:6px 0;';
+    note.textContent='YouTube релізи: '+ytLegend;
+    document.querySelector('#sec-dynamics .card').appendChild(note);
+  }
   mkC('cNet',labels,keys.map(k=>months[k]?.net||null),'line','#378ADD');
   mkC('cChurn',labels,keys.map(k=>cr(months[k])),'line','#D85A30');
   mkC('cYT',labels,keys.map(k=>months[k]?.yt_clicks||null),'bar','#EF9F27');
+  mkC('cSite',labels,keys.map(k=>months[k]?.site_visitors||null),'bar','#378ADD');
   const lkey=lk();
   document.getElementById('historyBody').innerHTML=keys.slice().reverse().map(k=>{
     const d=months[k]||{},c=cr(d);
@@ -528,7 +560,8 @@ function renderDynamics(){
       <td style="text-align:center;padding:7px 8px;color:${c==null?'inherit':c<=15?'#1D9E75':c<=25?'#854F0B':'#993C1D'}">${c!=null?c+'%':'—'}</td>
       <td style="text-align:center;padding:7px 8px">${d.new_paid||'—'}</td>
       <td style="text-align:center;padding:7px 8px">${d.churned||'—'}</td>
-      <td style="text-align:center;padding:7px 8px">${d.newmodel?'✓':'—'}</td>
+      <td style="text-align:center;padding:7px 8px">${d.yt_release?'📹 '+d.yt_release:'—'}</td>
+      <td style="text-align:center;padding:7px 8px;font-size:11px;color:var(--text2)">${d.poll_result||'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -566,7 +599,7 @@ function renderActions(){
   if((d.paid||0)<480)acts.push({u:'urgent',t:'Paid нижче 480',s:'Okoa для free members. YouTube CTA голосом. Перевірити declined payment emails.'});
   if((d.yt_clicks||0)<50)acts.push({u:'urgent',t:'YouTube → Patreon: '+(d.yt_clicks||0)+' кліків',s:'CTA голосом на 1 хв і в кінці відео. UTM аналіз у п\'ятницю.'});
   if((d.t_prince||0)<10)acts.push({u:'urgent',t:'Prince кити: '+(d.t_prince||0)+' — менше 10',s:'Хто пішов? Знаєш причину? Персональне повідомлення кожному хто ще є. Утримати Prince = пріоритет #1 серед китів.'});
-  if((d.gross_shop||0)<500)acts.push({u:'medium',t:'Shop $'+(d.gross_shop||0)+' — нижче $500',s:'Bundle CTA в кожному Patreon пості. Okoa при відписці пропонує Bundle.'});
+  if((d.gross_shop||0)<500)acts.push({u:'medium',t:'Shop $'+(d.gross_shop||0)+' — нижче $500',s:'Shop CTA в кожному Patreon пості. Okoa при відписці пропонує Bundle. Внеси деталізацію що продалось.'});
   if((d.tw_clicks||0)<50)acts.push({u:'medium',t:'Twitter мертвий',s:'Або наймаємо людину, або офіційно виключаємо з прогнозів і перераховуємо цілі.'});
   if(!d.newmodel){const lm=allKeys().slice().reverse().find(k=>months[k]?.newmodel);const ma=lm?allKeys().indexOf(lk())-allKeys().indexOf(lm):99;if(ma>=3)acts.push({u:'medium',t:'Нова модель — '+(ma>=99?'невідомо коли':'понад '+ma+' міс тому'),s:'Листопад 2025: нова модель → +88 paid. Мінімум 1/квартал. Анонс нової моделі = повноцінна маркетинг-кампанія.'});}
   if(!acts.length)acts.push({u:'',t:'Всі показники в нормі',s:'Фокус: exit survey для розуміння churn + Bundle CTA.'});
