@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
@@ -465,7 +465,7 @@ function renderPulse(){
     <div class="trow"><span><span class="tag ${tp>=320?'tn':'tr'}">КРИТИЧНИЙ</span> Paid &lt; 320</span><span style="font-size:12px;color:var(--text2)">${tp>=320?'✓ Норма':'🚨 Повне відкочування'}</span></div>
   `;
   const alts=[];
-  if(c!=null&&c>25)alts.push({t:'red',m:`Churn ${c}% — реальна норма після змін: 28-35%. Це все ще критично. Головне питання: чому люди йдуть після 2-3 місяців? Потрібно exit survey.`});
+  if(c!=null&&c>25)alts.push({t:'red',m:`Churn ${c}% — реальна базова цифра 28-35%/міс. Таргет 15%. Причини невідомі. Запусти exit survey в Patreon → Surveys.`});
   if(tp<480)alts.push({t:'amber',m:`Paid ${tp} — нижче 480. Okoa для free members. Pinned comments. YT CTA голосом.`});
   if((d.yt_clicks||0)<50)alts.push({t:'amber',m:`YouTube → Patreon лише ${d.yt_clicks||0} кліків. CTA голосом у нових відео.`});
   if(!d.newmodel){const lm=allKeys().slice().reverse().find(k=>months[k]?.newmodel);const ma=lm?allKeys().indexOf(lk())-allKeys().indexOf(lm):99;if(ma>=3)alts.push({t:'amber',m:`Нова модель — ${ma>=99?'невідомо коли':'понад '+ma+' міс тому'}. Листопад 2025 дав +88 paid. Мінімум 1/квартал.`});}
@@ -555,14 +555,14 @@ function renderFunnel(){
   else dx.push({dot:'dg',text:`YouTube: ${ytc} кліків. A/B тест pinned варіантів щоп'ятниці.`});
   if(!tw||tw<50)dx.push({dot:'dr',text:'Twitter: '+(tw||0)+' кліків. Без людини — не враховувати в прогнозах.'});
   const churnRate=cr(d);
-  if(churnRate&&churnRate>25)dx.push({dot:'dr',text:`Churn ${churnRate}% — критично. Після всіх змін норма впала до 28-35% (була ~90%). Але таргет 15%. Наступний крок: exit survey — дізнатись чому йдуть після 2-3 міс.`});
+  if(churnRate&&churnRate>25)dx.push({dot:'dr',text:`Churn ${churnRate}% — реальна базова цифра. Таргет 15%. Запусти exit survey в Patreon щоб зрозуміти чому йдуть.`});
   document.getElementById('funnelDiag').innerHTML=dx.map(x=>`<div class="sig"><div class="dot ${x.dot}"></div><span>${x.text}</span></div>`).join('');
 }
 
 function renderActions(){
   const k=lk(),d=months[k]||{},c=cr(d);
   const acts=[];
-  if(c!=null&&c>25)acts.push({u:'urgent',t:'Churn '+c+'% — найважливіша проблема',s:'Зміни (Charge Upfront, vault) знизили з 90% до ~30%. Але таргет 15%. Наступний крок: запустити exit survey в Patreon щоб зрозуміти чому люди йдуть.'});
+  if(c!=null&&c>25)acts.push({u:'urgent',t:'Churn '+c+'% — найважливіша проблема',s:'Реальна базова цифра: 28-35%/міс. Таргет 15%. Причини невідомі — потрібен exit survey. Patreon → Surveys → запустити опитування для тих хто відписався.'});
   if((d.paid||0)<480)acts.push({u:'urgent',t:'Paid нижче 480',s:'Okoa для free members. YouTube CTA голосом. Перевірити declined payment emails.'});
   if((d.yt_clicks||0)<50)acts.push({u:'urgent',t:'YouTube → Patreon: '+(d.yt_clicks||0)+' кліків',s:'CTA голосом на 1 хв і в кінці відео. UTM аналіз у п\'ятницю.'});
   if((d.t_prince||0)<10)acts.push({u:'urgent',t:'Prince кити: '+(d.t_prince||0)+' — менше 10',s:'Хто пішов? Знаєш причину? Персональне повідомлення кожному хто ще є. Утримати Prince = пріоритет #1 серед китів.'});
