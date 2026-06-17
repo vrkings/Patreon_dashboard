@@ -201,9 +201,12 @@ textarea{resize:vertical;min-height:64px}
     <div class="fr3">
       <div class="field"><label class="fl">Відео на Patreon (шт)</label><input type="number" id="i_vids" oninput="qS()"></div>
       <div class="field"><label class="fl">Reddit → Patreon кліки</label><input type="number" id="i_reddit_clicks" oninput="qS()"></div>
-      <div class="field"><label class="fl">YouTube відео — дата <small>(якщо був реліз)</small></label><input type="text" id="i_yt_release" placeholder="напр. 15" oninput="qS()"></div>
+      <div class="field"><label class="fl">Instagram → Patreon кліки</label><input type="number" id="i_ig_clicks" oninput="qS()"></div>
     </div>
-    <div class="field"><label class="fl">Результат poll місяця <small>(яка модель перемогла / тема)</small></label><input type="text" id="i_poll_result" placeholder="напр. Liona — VR twerk" oninput="qS()"></div>
+    <div class="fr2">
+      <div class="field"><label class="fl">YouTube відео — дата <small>(якщо був реліз)</small></label><input type="text" id="i_yt_release" placeholder="напр. 15" oninput="qS()"></div>
+      <div class="field"><label class="fl">Результат poll місяця <small>(яка модель перемогла / тема)</small></label><input type="text" id="i_poll_result" placeholder="напр. Liona — VR twerk" oninput="qS()"></div>
+    </div>
   </div>
   <div class="card">
     <div class="ct">Нотатка до місяця</div>
@@ -275,20 +278,22 @@ textarea{resize:vertical;min-height:64px}
     <div class="card">
       <div class="ct">Щотижневий ритм</div>
       <div class="trow"><span>Понеділок</span><span style="font-size:12px;color:var(--text2)">Paid count у Patreon Insights (5 хв)</span></div>
-      <div class="trow"><span>П'ятниця</span><span style="font-size:12px;color:var(--text2)">UTM analytics — який pinned конвертує</span></div>
+      <div class="trow"><span>П'ятниця</span><span style="font-size:12px;color:var(--text2)">GA аналітика — звідки трафік на сайт</span></div>
       <div class="trow"><span>П'ятниця</span><span style="font-size:12px;color:var(--text2)">Нові відписки — хто, з якого тіру</span></div>
       <div class="trow"><span>1-е числа</span><span style="font-size:12px;color:var(--text2)">Внести дані + PRINCE голосування</span></div>
       <div class="trow"><span>15-е числа</span><span style="font-size:12px;color:var(--text2)">PRINCE thank you відео (20 сек)</span></div>
       <div class="trow"><span>1-е числа</span><span style="font-size:12px;color:var(--text2)">CSV backup Patreon → Google Drive</span></div>
+      <div class="trow"><span>Щодня</span><span style="font-size:12px;color:var(--text2)">Twitter/X — Ігор (пости + відповіді)</span></div>
+      <div class="trow"><span>Тижнево</span><span style="font-size:12px;color:var(--text2)">Reddit r/oculusnsfw — активна участь</span></div>
     </div>
     <div class="card">
       <div class="ct">Активні ризики</div>
       <div class="sig"><div class="dot dr"></div><span>Churn 28-35% — вище таргету 15%. Головна проблема.</span></div>
-      <div class="sig"><div class="dot dr"></div><span>Резервного YouTube каналу немає (двічі банили)</span></div>
-      <div class="sig"><div class="dot dr"></div><span>Twitter — людина не знайдена</span></div>
-      <div class="sig"><div class="dot dy"></div><span>SLR — лінку на Patreon немає під відео</span></div>
-      <div class="sig"><div class="dot dy"></div><span>Annual memberships — 16 людей, не просуваються</span></div>
-      <div class="sig"><div class="dot dy"></div><span>Google Search Console не підключено</span></div>
+      <div class="sig"><div class="dot dg"></div><span>Twitter/X — Ігор веде активно. Ціль: +500 кліків/міс за 2 місяці.</span></div>
+      <div class="sig"><div class="dot dy"></div><span>Reddit r/oculusnsfw — 278K підписників. Починаємо рухати.</span></div>
+      <div class="sig"><div class="dot dy"></div><span>Instagram — новий канал, людина заливає відео. Відстежуємо трафік.</span></div>
+      <div class="sig"><div class="dot dy"></div><span>Annual memberships — не просуваються активно.</span></div>
+      <div class="sig"><div class="dot dy"></div><span>Google Search Console — не підключено. Показує по яких запитах знаходять сайт в Google. 10 хвилин налаштування.</span></div>
     </div>
   </div>
   <div class="card">
@@ -336,7 +341,7 @@ const TIERS=['graf','baron','knight','warrior','lord','prince'];
 const TPRICES={graf:15,baron:10,knight:5,warrior:1,lord:7,prince:50};
 const TNAMES={graf:'Graf $15',baron:'Baron $10',knight:'Knight $5',warrior:'Warrior $1',lord:'Lord $7 ⚡',prince:'Prince $50'};
 const TCOLORS={graf:'#1D9E75',baron:'#5DCAA5',knight:'#85B7EB',warrior:'#B4B2A9',lord:'#FAC775',prince:'#EF9F27'};
-const FIELDS=['paid','new_paid','churned','free','new_free','annual','net','gross_shop','shop_detail','site_visitors','yt_views','yt_clicks','yt_release','tw_clicks','reddit_clicks','vids','poll_result','t_graf','t_baron','t_knight','t_warrior','t_lord','t_prince'];
+const FIELDS=['paid','new_paid','churned','free','new_free','annual','net','gross_shop','shop_detail','site_visitors','yt_views','yt_clicks','yt_release','tw_clicks','reddit_clicks','ig_clicks','vids','poll_result','t_graf','t_baron','t_knight','t_warrior','t_lord','t_prince'];
 const SL={testing:'В тестуванні',confirmed:'Підтверджено ✓',rejected:'Відкинуто',paused:'Пауза'};
 const SC={testing:'ty',confirmed:'tg',rejected:'tr',paused:'tn'};
 
@@ -471,7 +476,8 @@ function renderPulse(){
   document.getElementById('channels').innerHTML=`
     <div class="trow"><span>YouTube CTA</span><span><span class="tag ${(d.yt_clicks||0)>=100?'tg':(d.yt_clicks||0)>=50?'ty':'tr'}">${(d.yt_clicks||0)>=100?'Добре':(d.yt_clicks||0)>=50?'Слабо':'Критично'}</span></span></div>
     <div class="trow"><span>Twitter/X</span><span><span class="tag ${(d.tw_clicks||0)>=200?'tg':(d.tw_clicks||0)>=50?'ty':'ty'}">${(d.tw_clicks||0)>=200?'Активний':(d.tw_clicks||0)>=50?'Слабо':'Розігрівається'}</span></span></div>
-    <div class="trow"><span>Reddit r/oculusnsfw</span><span><span class="tag ${(d.reddit_clicks||0)>=50?'tg':(d.reddit_clicks||0)>=10?'ty':'tn'}">${(d.reddit_clicks||0)>=50?'Активний':(d.reddit_clicks||0)>=10?'Є трафік':d.reddit_clicks?d.reddit_clicks+' кліків':'Не відстежується'}</span></span></div>
+    <div class="trow"><span>Reddit r/oculusnsfw</span><span><span class="tag ${(d.reddit_clicks||0)>=50?'tg':(d.reddit_clicks||0)>=10?'ty':'tn'}">${(d.reddit_clicks||0)>=50?'Активний':(d.reddit_clicks||0)>=10?'Є трафік':d.reddit_clicks?d.reddit_clicks+' кліків':'Запускаємо'}</span></span></div>
+    <div class="trow"><span>Instagram</span><span><span class="tag ${(d.ig_clicks||0)>=50?'tg':(d.ig_clicks||0)>=10?'ty':'ty'}">${(d.ig_clicks||0)>=50?'Активний':(d.ig_clicks||0)>=10?'Є трафік':'Розігрівається'}</span></span></div>
     <div class="trow"><span>Контент</span><span><span class="tag ${(d.vids||0)>=16?'tg':(d.vids||0)>=12?'ty':'tr'}">${d.vids||0} відео/міс</span></span></div>
     <div class="trow"><span>Annual members</span><span><span class="tag ${(d.annual||0)>=20?'tg':'ty'}">${d.annual||0} людей</span></span></div>
     <div class="trow"><span>Poll місяця</span><span><span class="tag tn" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.poll_result||'Не проводився'}</span></span></div>
@@ -600,7 +606,8 @@ function renderActions(){
   if((d.yt_clicks||0)<50)acts.push({u:'urgent',t:'YouTube → Patreon: '+(d.yt_clicks||0)+' кліків',s:'CTA голосом на 1 хв і в кінці відео. UTM аналіз у п\'ятницю.'});
   if((d.t_prince||0)<10)acts.push({u:'urgent',t:'Prince кити: '+(d.t_prince||0)+' — менше 10',s:'Хто пішов? Знаєш причину? Персональне повідомлення кожному хто ще є. Утримати Prince = пріоритет #1 серед китів.'});
   if((d.gross_shop||0)<500)acts.push({u:'medium',t:'Shop $'+(d.gross_shop||0)+' — нижче $500',s:'Shop CTA в кожному Patreon пості. Okoa при відписці пропонує Bundle. Внеси деталізацію що продалось.'});
-  if((d.tw_clicks||0)<50)acts.push({u:'medium',t:'Twitter мертвий',s:'Або наймаємо людину, або офіційно виключаємо з прогнозів і перераховуємо цілі.'});
+  if((d.tw_clicks||0)<50)acts.push({u:'medium',t:'Twitter: '+(d.tw_clicks||0)+' кліків — ще не дає трафіку',s:'Ігор веде активно. Канал розігрівається. Ціль: 500 кліків/міс через 2 місяці. Відстежуй динаміку.'});
+  if(!(d.reddit_clicks||0))acts.push({u:'medium',t:'Reddit — трафік не відстежується',s:'r/oculusnsfw: 278K підписників. Активна участь в спільноті + тизери з patreon.vrkings.tv. Внести кліки в дані коли запустимо.'});
   if(!d.newmodel){const lm=allKeys().slice().reverse().find(k=>months[k]?.newmodel);const ma=lm?allKeys().indexOf(lk())-allKeys().indexOf(lm):99;if(ma>=3)acts.push({u:'medium',t:'Нова модель — '+(ma>=99?'невідомо коли':'понад '+ma+' міс тому'),s:'Листопад 2025: нова модель → +88 paid. Мінімум 1/квартал. Анонс нової моделі = повноцінна маркетинг-кампанія.'});}
   if(!acts.length)acts.push({u:'',t:'Всі показники в нормі',s:'Фокус: exit survey для розуміння churn + Bundle CTA.'});
   document.getElementById('autoActions').innerHTML=acts.map((a,i)=>`<div class="ai ${a.u}"><div class="an">${i+1}</div><div class="ab"><div class="at">${a.t}</div><div class="as">${a.s}</div></div></div>`).join('');
