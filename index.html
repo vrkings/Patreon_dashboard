@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VR Kings CEO Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#ffffff;--bg2:#f7f7f5;--bg3:#f0efeb;--text:#1a1a1a;--text2:#6b6b6b;--text3:#9b9b9b;--border:#e5e5e3;--border2:#d0d0ce;--green:#0F6E56;--green-bg:#E1F5EE;--amber:#854F0B;--amber-bg:#FAEEDA;--red:#993C1D;--red-bg:#FAECE7;--radius:8px;--radius-lg:12px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:var(--text);background:var(--bg);min-height:100vh}
+.app{max-width:960px;margin:0 auto;padding:1.5rem 1rem}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px}
+.logo-text{font-size:18px;font-weight:600;letter-spacing:-.3px}
+.logo-sub{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.sync-badge{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);color:var(--text3)}
+.sync-badge.ok{color:var(--green);border-color:#5DCAA5;background:var(--green-bg)}
+.sync-badge.saving{color:var(--amber);border-color:#FAC775;background:var(--amber-bg)}
+.sync-badge.err{color:var(--red);border-color:#F0997B;background:var(--red-bg)}
+.month-badge{font-size:12px;padding:4px 14px;border:1px solid var(--border);border-radius:var(--radius);color:var(--text2)}
+.nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:1rem}
+.nb{padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;transition:all .15s}
+.nb.on{background:var(--bg2);color:var(--text);font-weight:500;border-color:var(--border2)}
+.nb:hover:not(.on){background:var(--bg2)}
+.sec{display:none}.sec.on{display:block}
+.mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.mc{border-radius:var(--radius);padding:14px 16px;background:var(--bg2)}
+.mc.ok{background:var(--green-bg)}.mc.warn{background:var(--amber-bg)}.mc.bad{background:var(--red-bg)}
+.ml{font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;color:var(--text3)}
+.mv{font-size:23px;font-weight:600;line-height:1.1}
+.mc.ok .mv{color:var(--green)}.mc.warn .mv{color:var(--amber)}.mc.bad .mv{color:var(--red)}
+.ms{font-size:11px;margin-top:4px;color:var(--text2)}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1rem}
+.ct{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px}
+input[type=number],input[type=text],textarea,select{border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);width:100%;transition:border .15s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--text2)}
+textarea{resize:vertical;min-height:64px}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.fr6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px}
+.field{margin-bottom:10px}
+.fl{font-size:12px;color:var(--text2);margin-bottom:5px;display:block}
+.fl small{font-size:11px;color:var(--text3)}
+.btn{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 20px;cursor:pointer;font-size:13px;font-family:inherit;color:var(--text);font-weight:500;transition:all .15s}
+.btn:hover{background:var(--bg3)}.btn:active{transform:scale(0.98)}
+.btn.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn.primary:hover{opacity:.85}
+.trow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.trow:last-child{border-bottom:none}
+.tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500}
+.tg{background:var(--green-bg);color:var(--green)}.ty{background:var(--amber-bg);color:var(--amber)}.tr{background:var(--red-bg);color:var(--red)}.tn{background:var(--bg2);color:var(--text2)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.dg{background:#1D9E75}.dy{background:#EF9F27}.dr{background:#D85A30}
+.sig{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.55}
+.sig:last-child{border-bottom:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bw{margin-bottom:10px}
+.bm{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--text2)}
+.bt{background:var(--bg2);border-radius:4px;height:9px;overflow:hidden}
+.bf{height:100%;border-radius:4px;transition:width .7s}
+.ai{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px}
+.an{font-size:22px;font-weight:600;color:var(--text3);min-width:26px;line-height:1.2}
+.ab{flex:1}.at{font-weight:500;font-size:13px;margin-bottom:4px}.as{font-size:12px;color:var(--text2);line-height:1.5}
+.ai.urgent{border-color:#F0997B;background:var(--red-bg)}.ai.urgent .an{color:var(--red)}
+.ai.medium{border-color:#FAC775;background:var(--amber-bg)}.ai.medium .an{color:var(--amber)}
+.mnav{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
+.mnb{border:1px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;padding:5px 12px;font-size:14px;font-family:inherit;color:var(--text2)}
+.mnb:hover{background:var(--bg2)}
+.mlbl{font-size:15px;font-weight:500;min-width:130px;text-align:center}
+.ab-box{border-radius:var(--radius);padding:12px 16px;margin-bottom:10px;font-size:13px;line-height:1.55;border:1px solid}
+.ab-box.red{background:var(--red-bg);border-color:#F0997B;color:var(--red)}
+.ab-box.amber{background:var(--amber-bg);border-color:#FAC775;color:var(--amber)}
+.ab-box.green{background:var(--green-bg);border-color:#5DCAA5;color:var(--green)}
+.tier-grid{display:grid;grid-template-columns:110px 1fr 80px 70px 70px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.tier-grid:last-child{border-bottom:none}
+.tier-hdr{display:grid;grid-template-columns:110px 1fr 80px 70px 70px;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2)}
+.tier-hdr span{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.03em}
+.tier-bar-wrap{height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;position:relative}
+.tier-bar{position:absolute;left:0;top:0;height:100%;border-radius:4px}
+.hypo-item{border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
+.del-btn{border:none;background:none;cursor:pointer;color:var(--text3);font-size:20px;padding:0 4px;line-height:1}
+.del-btn:hover{color:var(--red)}
+.fn-step{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)}
+.fn-step:last-child{border-bottom:none}
+.fn{font-size:20px;font-weight:600;min-width:75px}
+.fi{flex:1}.ft{font-size:13px;font-weight:500}.fsub{font-size:12px;color:var(--text2);margin-top:2px}
+.setup-screen{text-align:center;padding:60px 20px;max-width:520px;margin:0 auto}
+.setup-screen h2{font-size:22px;font-weight:600;margin-bottom:12px}
+.setup-screen p{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:20px}
+.setup-url{width:100%;padding:10px 14px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;margin-bottom:12px}
+.step{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:12px;background:var(--bg2);border-radius:var(--radius);margin-bottom:8px}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--text);color:var(--bg);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-text{font-size:13px;line-height:1.6;color:var(--text2)}
+.step-text strong{color:var(--text)}
+.save-ind{font-size:12px;color:var(--text3);margin-top:6px;display:block}
+.insight-box{background:var(--bg2);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;font-size:13px;line-height:1.6}
+.insight-box strong{display:block;margin-bottom:4px}
+@media(max-width:600px){.two{grid-template-columns:1fr}.fr2,.fr3{grid-template-columns:1fr 1fr}.fr6{grid-template-columns:1fr 1fr 1fr}.tier-grid,.tier-hdr{grid-template-columns:80px 1fr 70px 50px}}
+@media(max-width:400px){.fr2,.fr3,.fr6{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<div id="setupScreen" class="setup-screen" style="display:none">
+  <div style="font-size:40px;margin-bottom:16px">👑</div>
+  <h2>VR Kings CEO Dashboard</h2>
+  <p>Для синхронізації між пристроями підключи Google Sheets. Одноразове налаштування — 5 хвилин.</p>
+  <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Відкрий Google Sheets</strong> → таблиця "VR Kings CEO"</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Extensions → Apps Script</strong> → вставити Code.gs → зберегти</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Deploy → New deployment → Web App</strong> → Execute as: Me → Anyone → Deploy → скопіювати URL</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Вставити URL нижче</strong></div></div>
+  <input class="setup-url" id="setupUrl" placeholder="https://script.google.com/macros/s/...../exec">
+  <br>
+  <button class="btn primary" onclick="connectSheet()" style="width:100%;padding:12px">Підключити та завантажити дані</button>
+  <p style="margin-top:16px;font-size:12px;color:var(--text3)">URL зберігається тільки у браузері.</p>
+</div>
+
+<div id="mainApp" style="display:none">
+<div class="top-bar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div><div class="logo-text">VR Kings</div><div class="logo-sub">CEO Dashboard</div></div>
+    <span id="sBadge" class="tag tn">...</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span id="syncSt" class="sync-badge">з'єднання...</span>
+    <span id="curMonth" class="month-badge">—</span>
+    <button class="btn" onclick="showSetup()" style="font-size:12px;padding:5px 10px">⚙ Налаштування</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nb on" onclick="go('pulse',this)">Пульс</button>
+  <button class="nb" onclick="go('input',this)">Внести дані</button>
+  <button class="nb" onclick="go('tiers',this)">Тіри</button>
+  <button class="nb" onclick="go('dynamics',this)">Динаміка</button>
+  <button class="nb" onclick="go('funnel',this)">Воронка</button>
+  <button class="nb" onclick="go('actions',this)">Дії</button>
+  <button class="nb" onclick="go('hypo',this)">Гіпотези</button>
+</div>
+
+<div id="sec-pulse" class="sec on">
+  <div id="pulseAlerts"></div>
+  <div id="pulseMetrics" class="mg"></div>
+  <div class="two">
+    <div class="card"><div class="ct">Прогрес до цілей (3 міс)</div><div id="goals"></div></div>
+    <div class="card"><div class="ct">Стан каналів</div><div id="channels"></div></div>
+  </div>
+  <div class="card"><div class="ct">Тригери відкочування</div><div id="triggers"></div></div>
+</div>
+
+<div id="sec-input" class="sec">
+  <div class="mnav">
+    <button class="mnb" onclick="prevMonth()">←</button>
+    <span id="inputMonthLbl" class="mlbl">—</span>
+    <button class="mnb" onclick="nextMonth()">→</button>
+    <span style="font-size:12px;color:var(--text3);margin-left:4px">Вносити 1-го за попередній місяць</span>
+  </div>
+  <div class="card">
+    <div class="ct">Patreon — підписники</div>
+    <div class="fr3">
+      <div class="field"><label class="fl">Paid active (кінець місяця)</label><input type="number" id="i_paid" oninput="qS()"></div>
+      <div class="field"><label class="fl">Нових paid за місяць</label><input type="number" id="i_new_paid" oninput="qS()"></div>
+      <div class="field"><label class="fl">Відписалось paid</label><input type="number" id="i_churned" oninput="qS()"></div>
+    </div>
+    <div class="fr3">
+      <div class="field"><label class="fl">Free members (кінець міс)</label><input type="number" id="i_free" oninput="qS()"></div>
+      <div class="field"><label class="fl">Нових free</label><input type="number" id="i_new_free" oninput="qS()"></div>
+      <div class="field"><label class="fl">Annual members</label><input type="number" id="i_annual" oninput="qS()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Тіри — кількість active підписників <span style="font-weight:400;text-transform:none;font-size:11px">(Patreon → Insights → Membership tier)</span></div>
+    <div class="fr6">
+      <div class="field"><label class="fl">Graf $15</label><input type="number" id="i_t_graf" oninput="qS();uTC()"></div>
+      <div class="field"><label class="fl">Baron $10</label><input type="number" id="i_t_baron" oninput="qS();uTC()"></div>
+      <div class="field"><label class="fl">Knight $5</label><input type="number" id="i_t_knight" oninput="qS();uTC()"></div>
+      <div class="field"><label class="fl">Warrior $1</label><input type="number" id="i_t_warrior" oninput="qS();uTC()"></div>
+      <div class="field"><label class="fl">Lord $7 <small>(legacy)</small></label><input type="number" id="i_t_lord" oninput="qS();uTC()"></div>
+      <div class="field"><label class="fl">Prince $50</label><input type="number" id="i_t_prince" oninput="qS();uTC()"></div>
+    </div>
+    <div id="tierCalc" style="font-size:12px;color:var(--text2);margin-top:2px;padding:8px;background:var(--bg2);border-radius:var(--radius)"></div>
+  </div>
+  <div class="card">
+    <div class="ct">Фінанси — тільки Net (після всіх комісій Patreon)</div>
+    <div class="fr3">
+      <div class="field"><label class="fl">Net earnings ($) <small>з Patreon → Payouts</small></label><input type="number" id="i_net" oninput="qS()"></div>
+      <div class="field"><label class="fl">Shop gross ($)</label><input type="number" id="i_gross_shop" oninput="qS()"></div>
+      <div class="field"><label class="fl">Bundle продажів (шт)</label><input type="number" id="i_bundle_sales" oninput="qS()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Трафік</div>
+    <div class="fr3">
+      <div class="field"><label class="fl">YouTube переглядів</label><input type="number" id="i_yt_views" oninput="qS()"></div>
+      <div class="field"><label class="fl">YouTube → Patreon кліки <small>(UTM)</small></label><input type="number" id="i_yt_clicks" oninput="qS()"></div>
+      <div class="field"><label class="fl">Twitter → Patreon кліки</label><input type="number" id="i_tw_clicks" oninput="qS()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Контент</div>
+    <div class="fr2">
+      <div class="field"><label class="fl">Відео на Patreon (шт)</label><input type="number" id="i_vids" oninput="qS()"></div>
+      <div class="field"><label class="fl">Нова модель? <small>(1=так)</small></label><input type="number" id="i_newmodel" min="0" max="1" oninput="qS()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Нотатка до місяця</div>
+    <textarea id="i_note" placeholder="Що важливе сталося? Що спробували? Що спрацювало, що ні?" oninput="qS()"></textarea>
+  </div>
+  <span id="saveInd" class="save-ind">Зміни зберігаються автоматично</span>
+</div>
+
+<div id="sec-tiers" class="sec">
+  <div class="card"><div class="ct">Тіри — поточний місяць (active підписники)</div><div id="tierTable"></div></div>
+  <div class="two">
+    <div class="card"><div class="ct">Net по тірах ($)</div><div style="position:relative;height:200px"><canvas id="cTG"></canvas></div></div>
+    <div class="card"><div class="ct">Розподіл підписників</div><div style="position:relative;height:200px"><canvas id="cTD"></canvas></div></div>
+  </div>
+  <div class="card"><div class="ct">Динаміка тірів — 6 місяців</div><div style="position:relative;height:200px"><canvas id="cTH"></canvas></div></div>
+  <div class="card"><div class="ct">Аналіз тірів</div><div id="tierInsights"></div></div>
+</div>
+
+<div id="sec-dynamics" class="sec">
+  <div class="card"><div class="ct">Paid підписники (active)</div><div style="position:relative;height:180px"><canvas id="cPaid"></canvas></div></div>
+  <div class="two">
+    <div class="card"><div class="ct">Net earnings ($)</div><div style="position:relative;height:150px"><canvas id="cNet"></canvas></div></div>
+    <div class="card"><div class="ct">Churn rate (%)</div><div style="position:relative;height:150px"><canvas id="cChurn"></canvas></div></div>
+  </div>
+  <div class="card"><div class="ct">YouTube → Patreon кліки</div><div style="position:relative;height:130px"><canvas id="cYT"></canvas></div></div>
+  <div class="card">
+    <div class="ct">Таблиця по місяцях</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Місяць</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Paid</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Net $</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Shop $</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Churn %</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Нових</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Відп.</th>
+        <th style="padding:7px 8px;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase">Мод.</th>
+      </tr></thead>
+      <tbody id="historyBody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<div id="sec-funnel" class="sec">
+  <div class="card"><div class="ct">Воронка — поточний місяць</div><div id="funnelSteps"></div></div>
+  <div class="two">
+    <div class="card"><div class="ct">Конверсія каналів</div><div id="convBreakdown"></div></div>
+    <div class="card"><div class="ct">Діагноз</div><div id="funnelDiag"></div></div>
+  </div>
+</div>
+
+<div id="sec-actions" class="sec">
+  <div class="card"><div class="ct">Пріоритети — автоматично на основі реальних даних</div><div id="autoActions"></div></div>
+  <div class="two">
+    <div class="card">
+      <div class="ct">Щотижневий ритм</div>
+      <div class="trow"><span>Понеділок</span><span style="font-size:12px;color:var(--text2)">Paid count у Patreon Insights (5 хв)</span></div>
+      <div class="trow"><span>П'ятниця</span><span style="font-size:12px;color:var(--text2)">UTM analytics — який pinned конвертує</span></div>
+      <div class="trow"><span>П'ятниця</span><span style="font-size:12px;color:var(--text2)">Нові відписки — хто, з якого тіру</span></div>
+      <div class="trow"><span>1-е числа</span><span style="font-size:12px;color:var(--text2)">Внести дані + PRINCE голосування</span></div>
+      <div class="trow"><span>15-е числа</span><span style="font-size:12px;color:var(--text2)">PRINCE thank you відео (20 сек)</span></div>
+      <div class="trow"><span>1-е числа</span><span style="font-size:12px;color:var(--text2)">CSV backup Patreon → Google Drive</span></div>
+    </div>
+    <div class="card">
+      <div class="ct">Активні ризики</div>
+      <div class="sig"><div class="dot dr"></div><span>Churn 28-35% — вище таргету 15%. Головна проблема.</span></div>
+      <div class="sig"><div class="dot dr"></div><span>Резервного YouTube каналу немає (двічі банили)</span></div>
+      <div class="sig"><div class="dot dr"></div><span>Twitter — людина не знайдена</span></div>
+      <div class="sig"><div class="dot dy"></div><span>SLR — лінку на Patreon немає під відео</span></div>
+      <div class="sig"><div class="dot dy"></div><span>Annual memberships — 16 людей, не просуваються</span></div>
+      <div class="sig"><div class="dot dy"></div><span>Google Search Console не підключено</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">8 питань щомісячного звіту</div>
+    <div class="sig"><div class="dot dy"></div><span><strong>1.</strong> Paid більше чи менше? Який тір ріс, який падав?</span></div>
+    <div class="sig"><div class="dot dy"></div><span><strong>2.</strong> Churn цього місяця? Таргет ≤ 15%. Де причина якщо вище?</span></div>
+    <div class="sig"><div class="dot dy"></div><span><strong>3.</strong> Graf тір — скільки відписалось? Це критичний тір (68% доходу).</span></div>
+    <div class="sig"><div class="dot dy"></div><span><strong>4.</strong> Net earnings — більше чи менше? Чому?</span></div>
+    <div class="sig"><div class="dot dy"></div><span><strong>5.</strong> Shop Bundle продажів? Якщо 0 — змінити CTA.</span></div>
+    <div class="sig"><div class="dot dy"></div><span><strong>6.</strong> YouTube UTM: який pinned comment конвертував краще?</span></div>
+    <div class="sig"><div class="dot dy"></div><span><strong>7.</strong> Prince кити: всі 10 активні? Хтось відписався — чому?</span></div>
+    <div class="sig"><div class="dot dy"></div><span><strong>8.</strong> Нова модель цього місяця? Якщо ні — коли наступна?</span></div>
+  </div>
+</div>
+
+<div id="sec-hypo" class="sec">
+  <div class="card">
+    <div class="ct">Нова гіпотеза</div>
+    <div class="field"><label class="fl">Назва</label><input type="text" id="h_title" placeholder="Pinned comment variant 2 конвертує краще"></div>
+    <div class="fr2">
+      <div class="field"><label class="fl">Що тестуємо</label><textarea id="h_what" placeholder="Що змінюємо?"></textarea></div>
+      <div class="field"><label class="fl">Очікуємо</label><textarea id="h_expect" placeholder="Яку зміну і за скільки?"></textarea></div>
+    </div>
+    <div class="fr2">
+      <div class="field"><label class="fl">Метрика</label><input type="text" id="h_metric" placeholder="YT → Patreon кліки / тиждень"></div>
+      <div class="field"><label class="fl">Дедлайн</label><input type="text" id="h_deadline" placeholder="Через 4 тижні"></div>
+    </div>
+    <div class="field"><label class="fl">Результат</label><textarea id="h_result" placeholder="Що реально вийшло? Цифри."></textarea></div>
+    <div class="field"><label class="fl">Статус</label>
+      <select id="h_status">
+        <option value="testing">В тестуванні</option><option value="confirmed">Підтверджено ✓</option><option value="rejected">Відкинуто</option><option value="paused">Пауза</option>
+      </select>
+    </div>
+    <button class="btn primary" onclick="addHypo()">Додати гіпотезу</button>
+  </div>
+  <div id="hypoList"></div>
+</div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const MUA=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+const TIERS=['graf','baron','knight','warrior','lord','prince'];
+const TPRICES={graf:15,baron:10,knight:5,warrior:1,lord:7,prince:50};
+const TNAMES={graf:'Graf $15',baron:'Baron $10',knight:'Knight $5',warrior:'Warrior $1',lord:'Lord $7 ⚡',prince:'Prince $50'};
+const TCOLORS={graf:'#1D9E75',baron:'#5DCAA5',knight:'#85B7EB',warrior:'#B4B2A9',lord:'#FAC775',prince:'#EF9F27'};
+const FIELDS=['paid','new_paid','churned','free','new_free','annual','net','gross_shop','bundle_sales','yt_views','yt_clicks','tw_clicks','vids','newmodel','t_graf','t_baron','t_knight','t_warrior','t_lord','t_prince'];
+const SL={testing:'В тестуванні',confirmed:'Підтверджено ✓',rejected:'Відкинуто',paused:'Пауза'};
+const SC={testing:'ty',confirmed:'tg',rejected:'tr',paused:'tn'};
+
+// РЕАЛЬНІ ДАНІ З PATREON (оновлено червень 2026)
+const SEED=[
+  {key:'2025-12',paid:477,new_paid:168,churned:131,free:2357,new_free:179,annual:14,net:6411,gross_shop:750,bundle_sales:1,yt_views:1350000,yt_clicks:50,tw_clicks:0,vids:18,newmodel:1,t_graf:319,t_baron:71,t_knight:44,t_warrior:20,t_lord:14,t_prince:9,note:'Пік — найкращий місяць. Нова модель листопад дала ефект.'},
+  {key:'2026-01',paid:470,new_paid:157,churned:158,free:2469,new_free:189,annual:15,net:5491,gross_shop:680,bundle_sales:1,yt_views:1300000,yt_clicks:46,tw_clicks:0,vids:16,newmodel:0,t_graf:307,t_baron:70,t_knight:43,t_warrior:24,t_lord:15,t_prince:11,note:'Post-holiday drop.'},
+  {key:'2026-02',paid:440,new_paid:139,churned:163,free:2556,new_free:184,annual:14,net:5274,gross_shop:620,bundle_sales:1,yt_views:1280000,yt_clicks:45,tw_clicks:0,vids:15,newmodel:0,t_graf:290,t_baron:69,t_knight:43,t_warrior:16,t_lord:14,t_prince:8,note:''},
+  {key:'2026-03',paid:469,new_paid:158,churned:122,free:2655,new_free:187,annual:15,net:5482,gross_shop:660,bundle_sales:1,yt_views:1300000,yt_clicks:46,tw_clicks:0,vids:16,newmodel:0,t_graf:296,t_baron:87,t_knight:43,t_warrior:22,t_lord:13,t_prince:8,note:''},
+  {key:'2026-04',paid:459,new_paid:154,churned:158,free:2911,new_free:378,annual:18,net:5366,gross_shop:640,bundle_sales:1,yt_views:1308667,yt_clicks:46,tw_clicks:0,vids:15,newmodel:0,t_graf:298,t_baron:68,t_knight:47,t_warrior:25,t_lord:12,t_prince:9,note:'Рекордний приплив free members.'},
+  {key:'2026-05',paid:508,new_paid:204,churned:147,free:2979,new_free:194,annual:17,net:6379,gross_shop:640,bundle_sales:1,yt_views:1300000,yt_clicks:46,tw_clicks:0,vids:16,newmodel:0,t_graf:340,t_baron:77,t_knight:43,t_warrior:26,t_lord:12,t_prince:10,note:'Web Player. Нова структура. Charge Upfront. Рекорд нових paid.'}
+];
+
+let months={},hypos=[],editKey='',chts={},scriptUrl='',saveT=null;
+
+function now(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function k2l(k){const[y,m]=k.split('-');return MUA[parseInt(m)-1]+' '+y;}
+function allKeys(){return Object.keys(months).sort();}
+function lk(){const k=allKeys();return k.length?k[k.length-1]:'';}
+function cr(d){
+  if(!d||!d.new_paid||!d.churned)return null;
+  const start=(d.paid||0)+(d.churned||0)-(d.new_paid||0);
+  if(!start||start<=0)return null;
+  return Math.round((d.churned/start)*100);
+}
+function tNet(d,t){return(d['t_'+t]||0)*TPRICES[t];}
+function totalTierNet(d){return TIERS.reduce((a,t)=>a+tNet(d,t),0);}
+function mcC(v,g,b,inv){
+  if(v===null||v===undefined)return'';
+  if(inv){if(v<=g)return'ok';if(v>=b)return'bad';return'warn';}
+  if(v>=g)return'ok';if(v<=b)return'bad';return'warn';
+}
+function setSS(cls,txt){const e=document.getElementById('syncSt');e.className='sync-badge'+(cls?' '+cls:'');e.textContent=txt;}
+
+async function apiFetch(action,body){
+  if(!scriptUrl)throw new Error('No URL');
+  const r=await fetch(scriptUrl+'?action='+action,{method:'POST',body:JSON.stringify({action,...body})});
+  return r.json();
+}
+
+async function loadData(){
+  setSS('saving','завантаження...');
+  months={};SEED.forEach(s=>{months[s.key]={...s};});
+  try{
+    const d=await apiFetch('getAll',{});
+    if(d.months)Object.assign(months,d.months);
+    if(d.hypos)hypos=d.hypos;
+    setSS('ok','синхронізовано ✓');
+  }catch(e){setSS('err','офлайн — локальні дані');}
+  editKey=now();
+  renderPulse();
+  document.getElementById('curMonth').textContent=k2l(lk());
+}
+
+async function saveMonthRemote(key){
+  try{setSS('saving','збереження...');await apiFetch('saveMonth',{key,data:months[key]});setSS('ok','збережено ✓');setTimeout(()=>setSS('ok','синхронізовано ✓'),2000);}
+  catch(e){setSS('err','помилка збереження');}
+}
+async function saveHyposRemote(){try{await apiFetch('saveHypos',{hypos});}catch(e){}}
+
+function readInput(){
+  const k=editKey;if(!months[k])months[k]={key:k};
+  FIELDS.forEach(f=>{const el=document.getElementById('i_'+f);if(el&&el.value!=='')months[k][f]=parseFloat(el.value)||0;});
+  months[k].note=document.getElementById('i_note').value;months[k].key=k;
+}
+
+function qS(){
+  readInput();uTC();
+  document.getElementById('saveInd').textContent='Зберігається...';
+  if(saveT)clearTimeout(saveT);
+  saveT=setTimeout(async()=>{await saveMonthRemote(editKey);document.getElementById('saveInd').textContent='Збережено ✓';renderPulse();},1500);
+}
+
+function uTC(){
+  const vals=TIERS.map(t=>{const e=document.getElementById('i_t_'+t);return e?parseFloat(e.value)||0:0;});
+  const total=vals.reduce((a,b)=>a+b,0);
+  const gross=TIERS.reduce((a,t,i)=>a+vals[i]*TPRICES[t],0);
+  if(total>0){
+    const grafPct=vals[0]?Math.round((vals[0]*15/gross)*100):0;
+    document.getElementById('tierCalc').innerHTML=`Розрахунковий gross підписки: <strong>$${gross.toLocaleString()}</strong> · Підписників: <strong>${total}</strong> · Graf дає: <strong>${grafPct}% доходу</strong>`;
+  }
+}
+
+function loadInput(){
+  document.getElementById('inputMonthLbl').textContent=k2l(editKey);
+  const d=months[editKey]||{};
+  FIELDS.forEach(f=>{const el=document.getElementById('i_'+f);if(el)el.value=(d[f]!==undefined&&d[f]!==0)?d[f]:'';});
+  document.getElementById('i_note').value=d.note||'';
+  uTC();
+  document.getElementById('saveInd').textContent='Зміни зберігаються автоматично';
+}
+
+function prevMonth(){const[y,m]=editKey.split('-');let mo=parseInt(m)-1,yr=parseInt(y);if(mo<1){mo=12;yr--;}editKey=yr+'-'+String(mo).padStart(2,'0');loadInput();}
+function nextMonth(){const[y,m]=editKey.split('-');let mo=parseInt(m)+1,yr=parseInt(y);if(mo>12){mo=1;yr++;}editKey=yr+'-'+String(mo).padStart(2,'0');loadInput();}
+
+function go(id,btn){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('sec-'+id).classList.add('on');
+  btn.classList.add('on');
+  ({pulse:renderPulse,input:loadInput,tiers:renderTiers,dynamics:renderDynamics,funnel:renderFunnel,actions:renderActions,hypo:renderHypos})[id]?.();
+}
+
+function renderPulse(){
+  const k=lk(),d=months[k]||{};
+  const keys=allKeys(),pk=keys.length>1?keys[keys.length-2]:null,pd=pk?months[pk]:{};
+  document.getElementById('curMonth').textContent=k2l(k||now());
+  const c=cr(d);
+  const paidOk=(d.paid||0)>=500,netOk=(d.net||0)>=6000,churnOk=c===null||c<=20;
+  const allOk=paidOk&&netOk&&churnOk;
+  const anyCrit=(d.paid||0)<380||(d.net||0)<4500;
+  const sb=document.getElementById('sBadge');
+  if(allOk){sb.className='tag tg';sb.textContent='Норма';}
+  else if(anyCrit){sb.className='tag tr';sb.textContent='Критично';}
+  else{sb.className='tag ty';sb.textContent='Увага';}
+  const pD=pd.paid!=null?(d.paid||0)-(pd.paid||0):null;
+  const nD=pd.net!=null?(d.net||0)-(pd.net||0):null;
+  document.getElementById('pulseMetrics').innerHTML=`
+    <div class="mc ${mcC(d.paid,500,380)}"><div class="ml">Paid active</div><div class="mv">${d.paid||'—'}</div><div class="ms">${pD!=null?(pD>=0?'▲ +'+pD:'▼ '+pD)+' від поп. міс':'введи дані'}</div></div>
+    <div class="mc ${mcC(d.net,6000,4500)}"><div class="ml">Net / міс</div><div class="mv">$${d.net?d.net.toLocaleString():'—'}</div><div class="ms">${nD!=null?(nD>=0?'+$'+nD:'−$'+Math.abs(nD))+' від поп. міс':''}</div></div>
+    <div class="mc ${mcC(c,0,20,true)}"><div class="ml">Churn rate</div><div class="mv">${c!=null?c+'%':'—'}</div><div class="ms">Таргет ≤ 15% · зараз ~28-35%</div></div>
+    <div class="mc ${mcC(d.yt_clicks,100,30)}"><div class="ml">YT → Patreon</div><div class="mv">${d.yt_clicks||'—'}</div><div class="ms">кліків / міс</div></div>
+    <div class="mc ${mcC(d.gross_shop,1200,400)}"><div class="ml">Shop / міс</div><div class="mv">$${d.gross_shop||'—'}</div><div class="ms">${d.bundle_sales||0} bundle</div></div>
+    <div class="mc ${mcC(d.t_prince,10,8)}"><div class="ml">Prince кити</div><div class="mv">${d.t_prince||'—'}</div><div class="ms">по $50/міс · ${(d.t_prince||0)*50}$ разом</div></div>
+  `;
+  document.getElementById('goals').innerHTML=`
+    <div class="bw"><div class="bm"><span>Paid (ціль 600)</span><span>${d.paid||0}/600</span></div><div class="bt"><div class="bf" style="width:${Math.min(100,Math.round(((d.paid||0)/600)*100))}%;background:#1D9E75"></div></div></div>
+    <div class="bw"><div class="bm"><span>Net/міс (ціль $8,000)</span><span>$${d.net||0}/$8,000</span></div><div class="bt"><div class="bf" style="width:${Math.min(100,Math.round(((d.net||0)/8000)*100))}%;background:#1D9E75"></div></div></div>
+    <div class="bw"><div class="bm"><span>Churn (ціль ≤ 15%)</span><span>${c!=null?c+'%':'?'} — зараз критично</span></div><div class="bt"><div class="bf" style="width:${c!=null?Math.min(100,Math.round((c/90)*100)):0}%;background:${c&&c<=15?'#1D9E75':c&&c<=25?'#EF9F27':'#D85A30'}"></div></div></div>
+    <div class="bw"><div class="bm"><span>Shop (ціль $1,500)</span><span>$${d.gross_shop||0}/$1,500</span></div><div class="bt"><div class="bf" style="width:${Math.min(100,Math.round(((d.gross_shop||0)/1500)*100))}%;background:#1D9E75"></div></div></div>
+  `;
+  document.getElementById('channels').innerHTML=`
+    <div class="trow"><span>YouTube CTA</span><span><span class="tag ${(d.yt_clicks||0)>=100?'tg':(d.yt_clicks||0)>=50?'ty':'tr'}">${(d.yt_clicks||0)>=100?'Добре':(d.yt_clicks||0)>=50?'Слабо':'Критично'}</span></span></div>
+    <div class="trow"><span>Twitter</span><span><span class="tag ${(d.tw_clicks||0)>=200?'tg':(d.tw_clicks||0)>=50?'ty':'tr'}">${(d.tw_clicks||0)>=200?'Активний':(d.tw_clicks||0)>=50?'Слабо':'Мертвий'}</span></span></div>
+    <div class="trow"><span>Контент</span><span><span class="tag ${(d.vids||0)>=16?'tg':(d.vids||0)>=12?'ty':'tr'}">${d.vids||0} відео/міс</span></span></div>
+    <div class="trow"><span>Annual members</span><span><span class="tag ${(d.annual||0)>=20?'tg':'ty'}">${d.annual||0} людей</span></span></div>
+    <div class="trow"><span>Нова модель</span><span><span class="tag ${d.newmodel?'tg':'tn'}">${d.newmodel?'Так ✓':'Не цього міс'}</span></span></div>
+  `;
+  const tp=d.paid||0;
+  document.getElementById('triggers').innerHTML=`
+    <div class="trow"><span><span class="tag ${tp>=480?'tn':'ty'}">ЖОВТИЙ</span> Paid &lt; 480</span><span style="font-size:12px;color:var(--text2)">${tp>=480?'✓ Норма':'⚠ Посилити Okoa + YT CTA'}</span></div>
+    <div class="trow"><span><span class="tag ${tp>=380?'tn':'tr'}">ЧЕРВОНИЙ</span> Paid &lt; 380</span><span style="font-size:12px;color:var(--text2)">${tp>=380?'✓ Норма':'🚨 Повертаємо бібліотеку $15'}</span></div>
+    <div class="trow"><span><span class="tag ${tp>=320?'tn':'tr'}">КРИТИЧНИЙ</span> Paid &lt; 320</span><span style="font-size:12px;color:var(--text2)">${tp>=320?'✓ Норма':'🚨 Повне відкочування'}</span></div>
+  `;
+  const alts=[];
+  if(c!=null&&c>25)alts.push({t:'red',m:`Churn ${c}% — реальна норма після змін: 28-35%. Це все ще критично. Головне питання: чому люди йдуть після 2-3 місяців? Потрібно exit survey.`});
+  if(tp<480)alts.push({t:'amber',m:`Paid ${tp} — нижче 480. Okoa для free members. Pinned comments. YT CTA голосом.`});
+  if((d.yt_clicks||0)<50)alts.push({t:'amber',m:`YouTube → Patreon лише ${d.yt_clicks||0} кліків. CTA голосом у нових відео.`});
+  if(!d.newmodel){const lm=allKeys().slice().reverse().find(k=>months[k]?.newmodel);const ma=lm?allKeys().indexOf(lk())-allKeys().indexOf(lm):99;if(ma>=3)alts.push({t:'amber',m:`Нова модель — ${ma>=99?'невідомо коли':'понад '+ma+' міс тому'}. Листопад 2025 дав +88 paid. Мінімум 1/квартал.`});}
+  if(!alts.length)alts.push({t:'green',m:'Метрики в нормі. Фокус: знизити churn нижче 25% і Bundle CTA в кожному пості.'});
+  document.getElementById('pulseAlerts').innerHTML=alts.map(a=>`<div class="ab-box ${a.t}">${a.m}</div>`).join('');
+}
+
+function renderTiers(){
+  const k=lk(),d=months[k]||{};
+  const keys=allKeys(),pk=keys.length>1?keys[keys.length-2]:null,pd=pk?months[pk]:{};
+  const totalSubs=TIERS.reduce((a,t)=>a+(d['t_'+t]||0),0)||1;
+  const totalG=totalTierNet(d)||1;
+  let rows='<div class="tier-hdr"><span>Тір</span><span>Підписники</span><span style="text-align:right">Est. Net $</span><span style="text-align:right">% $</span><span style="text-align:right">Зміна</span></div>';
+  TIERS.forEach(t=>{
+    const cnt=d['t_'+t]||0,g=tNet(d,t),pct=Math.round((g/totalG)*100);
+    const diff=pk?(cnt-(pd['t_'+t]||0)):null;
+    const ds=diff!=null?(diff>0?`<span style="color:#1D9E75">+${diff}</span>`:diff<0?`<span style="color:#D85A30">${diff}</span>`:'<span style="color:var(--text3)">—</span>'):'<span style="color:var(--text3)">—</span>';
+    rows+=`<div class="tier-grid"><span style="font-weight:500">${TNAMES[t]}</span><div><div class="tier-bar-wrap"><div class="tier-bar" style="width:${Math.round((cnt/totalSubs)*100)}%;background:${TCOLORS[t]}"></div></div><span style="font-size:11px;color:var(--text2)">${cnt} підп.</span></div><span style="text-align:right;font-weight:500">$${g.toLocaleString()}</span><span style="text-align:right;color:var(--text2)">${pct}%</span><span style="text-align:right">${ds}</span></div>`;
+  });
+  rows+=`<div class="tier-grid" style="font-weight:600;border-top:1px solid var(--border2);margin-top:4px"><span>Разом</span><span style="font-size:12px">${totalSubs}</span><span style="text-align:right">$${totalG.toLocaleString()}</span><span></span><span></span></div>`;
+  document.getElementById('tierTable').innerHTML=rows;
+  mkC('cTG',TIERS.map(t=>TNAMES[t]),TIERS.map(t=>tNet(d,t)),'bar',TIERS.map(t=>TCOLORS[t]));
+  if(chts.cTD)chts.cTD.destroy();
+  chts.cTD=new Chart(document.getElementById('cTD'),{type:'doughnut',data:{labels:TIERS.map(t=>TNAMES[t]),datasets:[{data:TIERS.map(t=>d['t_'+t]||0),backgroundColor:TIERS.map(t=>TCOLORS[t]),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}}}}});
+  const hKeys=allKeys().slice(-6);
+  if(chts.cTH)chts.cTH.destroy();
+  chts.cTH=new Chart(document.getElementById('cTH'),{type:'bar',data:{labels:hKeys.map(k=>k2l(k).replace(' 20','\'')),datasets:TIERS.map(t=>({label:TNAMES[t],data:hKeys.map(k=>months[k]?.['t_'+t]||0),backgroundColor:TCOLORS[t],stack:'s'}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},scales:{x:{stacked:true,ticks:{font:{size:10}}},y:{stacked:true,ticks:{font:{size:10}}}}}});
+  const ins=[];
+  const grafG=tNet(d,'graf'),grafPct=Math.round((grafG/totalG)*100);
+  ins.push({dot:'dy',text:`Graf дає ${grafPct}% всього доходу (${d['t_graf']||0} людей × $15 = $${grafG}). Це і сила і вразливість — окремо відстежуй churn саме Graf тіру.`});
+  if((d.t_prince||0)<10)ins.push({dot:'dr',text:`Prince кити: лише ${d.t_prince||0}. Були 11, стало менше. Кожна відписка Prince = -$50/міс. Знаєш хто і чому пішов?`});
+  else ins.push({dot:'dg',text:`Prince: ${d.t_prince||0} китів × $50 = $${(d.t_prince||0)*50}/міс.`});
+  if((d.t_lord||0)>0)ins.push({dot:'dy',text:`Lord $7 legacy: ${d.t_lord||0} людей. Це гранфазеровані члени. Поступово переходять на Baron $10 або відписуються.`});
+  document.getElementById('tierInsights').innerHTML=ins.map(x=>`<div class="sig"><div class="dot ${x.dot}"></div><span>${x.text}</span></div>`).join('');
+}
+
+function mkC(id,labels,vals,type,colors){
+  if(chts[id])chts[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return;
+  const isBar=type==='bar';
+  const color=Array.isArray(colors)?colors:'#1D9E75';
+  chts[id]=new Chart(ctx,{type:type||'line',data:{labels,datasets:[{data:vals,borderColor:isBar?undefined:(Array.isArray(color)?color[0]:color),backgroundColor:isBar?color:(Array.isArray(color)?color[0]:color)+'20',fill:!isBar,tension:0.3,pointRadius:3,borderWidth:2,spanGaps:true,borderRadius:isBar?4:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:false}},y:{ticks:{font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+}
+
+function renderDynamics(){
+  const keys=allKeys();
+  const labels=keys.map(k=>k2l(k).replace(' 20','\''));
+  mkC('cPaid',labels,keys.map(k=>months[k]?.paid||null));
+  mkC('cNet',labels,keys.map(k=>months[k]?.net||null),'line','#378ADD');
+  mkC('cChurn',labels,keys.map(k=>cr(months[k])),'line','#D85A30');
+  mkC('cYT',labels,keys.map(k=>months[k]?.yt_clicks||null),'bar','#EF9F27');
+  const lkey=lk();
+  document.getElementById('historyBody').innerHTML=keys.slice().reverse().map(k=>{
+    const d=months[k]||{},c=cr(d);
+    return`<tr style="${k===lkey?'background:var(--bg2);font-weight:500':''}">
+      <td style="padding:7px 8px">${k2l(k)}</td>
+      <td style="text-align:center;padding:7px 8px">${d.paid||'—'}</td>
+      <td style="text-align:center;padding:7px 8px">${d.net?'$'+d.net.toLocaleString():'—'}</td>
+      <td style="text-align:center;padding:7px 8px">${d.gross_shop?'$'+d.gross_shop:'—'}</td>
+      <td style="text-align:center;padding:7px 8px;color:${c==null?'inherit':c<=15?'#1D9E75':c<=25?'#854F0B':'#993C1D'}">${c!=null?c+'%':'—'}</td>
+      <td style="text-align:center;padding:7px 8px">${d.new_paid||'—'}</td>
+      <td style="text-align:center;padding:7px 8px">${d.churned||'—'}</td>
+      <td style="text-align:center;padding:7px 8px">${d.newmodel?'✓':'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderFunnel(){
+  const k=lk(),d=months[k]||{};
+  const ytv=d.yt_views||0,ytc=d.yt_clicks||0,tw=d.tw_clicks||0;
+  const conv=ytv?((ytc/ytv)*100).toFixed(3):0;
+  document.getElementById('funnelSteps').innerHTML=`
+    <div class="fn-step"><div class="fn">${ytv?Math.round(ytv/1000)+'K':'—'}</div><div class="fi"><div class="ft">YouTube переглядів/міс</div><div class="fsub">46% мобільний · 32% ТВ (не бачать опис)</div></div><span class="tag tn">100%</span></div>
+    <div class="fn-step"><div class="fn">${ytv?Math.round(ytv*0.257/1000)+'K':'—'}</div><div class="fi"><div class="ft">Унікальних глядачів</div><div class="fsub">89% чол · 25-34</div></div><span class="tag tn">25.7%</span></div>
+    <div class="fn-step"><div class="fn" style="color:${ytc<100?'#D85A30':ytc<300?'#EF9F27':'#1D9E75'}">${ytc+tw}</div><div class="fi"><div class="ft">Кліків на Patreon (YT+TW)</div><div class="fsub">YouTube: ${ytc} · Twitter: ${tw}</div></div><span class="tag ${parseFloat(conv)<0.01?'tr':parseFloat(conv)<0.05?'ty':'tg'}">${conv}%</span></div>
+    <div class="fn-step"><div class="fn" style="color:#1D9E75">${d.new_paid||'—'}</div><div class="fi"><div class="ft">Нових paid / міс (факт)</div><div class="fsub">Відписалось: ${d.churned||'—'} · Net: ${d.new_paid&&d.churned?d.new_paid-d.churned:''}</div></div><span class="tag tn">факт</span></div>
+  `;
+  document.getElementById('convBreakdown').innerHTML=`
+    <div class="trow"><span>YouTube кліки</span><span style="color:${ytc<50?'#D85A30':ytc<150?'#EF9F27':'#1D9E75'};font-weight:500">${ytc}/міс</span></div>
+    <div class="trow"><span>Twitter кліки</span><span style="color:${tw<100?'#D85A30':tw<300?'#EF9F27':'#1D9E75'};font-weight:500">${tw}/міс</span></div>
+    <div class="trow"><span>Нових paid всього</span><span style="font-weight:500">${d.new_paid||0}/міс</span></div>
+    <div class="trow"><span>Відписалось paid</span><span style="font-weight:500;color:#D85A30">${d.churned||0}/міс</span></div>
+    <div class="trow"><span>Net приріст paid</span><span style="font-weight:500;color:${(d.new_paid||0)-(d.churned||0)>=0?'#1D9E75':'#D85A30'}">${(d.new_paid||0)-(d.churned||0)>=0?'+':''}${(d.new_paid||0)-(d.churned||0)}/міс</span></div>
+  `;
+  const dx=[];
+  if(ytc<100)dx.push({dot:'dr',text:`YouTube: ${ytc} кліків при ${Math.round((ytv||0)/1000)}K переглядів. 78% глядачів на ТВ/телефоні не бачать опис — тільки голосовий CTA і pinned comments.`});
+  else dx.push({dot:'dg',text:`YouTube: ${ytc} кліків. A/B тест pinned варіантів щоп'ятниці.`});
+  if(!tw||tw<50)dx.push({dot:'dr',text:'Twitter: '+(tw||0)+' кліків. Без людини — не враховувати в прогнозах.'});
+  const churnRate=cr(d);
+  if(churnRate&&churnRate>25)dx.push({dot:'dr',text:`Churn ${churnRate}% — критично. Після всіх змін норма впала до 28-35% (була ~90%). Але таргет 15%. Наступний крок: exit survey — дізнатись чому йдуть після 2-3 міс.`});
+  document.getElementById('funnelDiag').innerHTML=dx.map(x=>`<div class="sig"><div class="dot ${x.dot}"></div><span>${x.text}</span></div>`).join('');
+}
+
+function renderActions(){
+  const k=lk(),d=months[k]||{},c=cr(d);
+  const acts=[];
+  if(c!=null&&c>25)acts.push({u:'urgent',t:'Churn '+c+'% — найважливіша проблема',s:'Зміни (Charge Upfront, vault) знизили з 90% до ~30%. Але таргет 15%. Наступний крок: запустити exit survey в Patreon щоб зрозуміти чому люди йдуть.'});
+  if((d.paid||0)<480)acts.push({u:'urgent',t:'Paid нижче 480',s:'Okoa для free members. YouTube CTA голосом. Перевірити declined payment emails.'});
+  if((d.yt_clicks||0)<50)acts.push({u:'urgent',t:'YouTube → Patreon: '+(d.yt_clicks||0)+' кліків',s:'CTA голосом на 1 хв і в кінці відео. UTM аналіз у п\'ятницю.'});
+  if((d.t_prince||0)<10)acts.push({u:'urgent',t:'Prince кити: '+(d.t_prince||0)+' — менше 10',s:'Хто пішов? Знаєш причину? Персональне повідомлення кожному хто ще є. Утримати Prince = пріоритет #1 серед китів.'});
+  if((d.gross_shop||0)<500)acts.push({u:'medium',t:'Shop $'+(d.gross_shop||0)+' — нижче $500',s:'Bundle CTA в кожному Patreon пості. Okoa при відписці пропонує Bundle.'});
+  if((d.tw_clicks||0)<50)acts.push({u:'medium',t:'Twitter мертвий',s:'Або наймаємо людину, або офіційно виключаємо з прогнозів і перераховуємо цілі.'});
+  if(!d.newmodel){const lm=allKeys().slice().reverse().find(k=>months[k]?.newmodel);const ma=lm?allKeys().indexOf(lk())-allKeys().indexOf(lm):99;if(ma>=3)acts.push({u:'medium',t:'Нова модель — '+(ma>=99?'невідомо коли':'понад '+ma+' міс тому'),s:'Листопад 2025: нова модель → +88 paid. Мінімум 1/квартал. Анонс нової моделі = повноцінна маркетинг-кампанія.'});}
+  if(!acts.length)acts.push({u:'',t:'Всі показники в нормі',s:'Фокус: exit survey для розуміння churn + Bundle CTA.'});
+  document.getElementById('autoActions').innerHTML=acts.map((a,i)=>`<div class="ai ${a.u}"><div class="an">${i+1}</div><div class="ab"><div class="at">${a.t}</div><div class="as">${a.s}</div></div></div>`).join('');
+}
+
+async function addHypo(){
+  const h={id:Date.now(),title:document.getElementById('h_title').value||'Без назви',what:document.getElementById('h_what').value,expect:document.getElementById('h_expect').value,metric:document.getElementById('h_metric').value,deadline:document.getElementById('h_deadline').value,status:document.getElementById('h_status').value,result:document.getElementById('h_result').value,created:new Date().toLocaleDateString('uk-UA')};
+  hypos.unshift(h);await saveHyposRemote();
+  ['h_title','h_what','h_expect','h_metric','h_deadline','h_result'].forEach(id=>document.getElementById(id).value='');
+  renderHypos();
+}
+async function delHypo(id){hypos=hypos.filter(h=>h.id!==id);await saveHyposRemote();renderHypos();}
+async function uHS(id,v){const h=hypos.find(x=>x.id===id);if(h){h.status=v;await saveHyposRemote();}}
+async function uHR(id,v){const h=hypos.find(x=>x.id===id);if(h){h.result=v;await saveHyposRemote();}}
+
+function renderHypos(){
+  const el=document.getElementById('hypoList');
+  if(!hypos.length){el.innerHTML='<div style="text-align:center;color:var(--text3);font-size:13px;padding:30px 0">Гіпотез немає. Додай першу вище.</div>';return;}
+  el.innerHTML=hypos.map(h=>`<div class="hypo-item">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:14px;font-weight:500">${h.title}</span>
+      <div style="display:flex;gap:8px;align-items:center"><span class="tag ${SC[h.status]||'tn'}">${SL[h.status]||h.status}</span><button class="del-btn" onclick="delHypo(${h.id})">×</button></div>
+    </div>
+    <div class="fr2" style="margin-bottom:10px">
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em">Що тестуємо</div><div style="font-size:13px;line-height:1.5">${h.what||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em">Очікуємо</div><div style="font-size:13px;line-height:1.5">${h.expect||'—'}</div></div>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;color:var(--text2);flex-wrap:wrap"><span>Метрика: <strong>${h.metric||'—'}</strong></span><span>Дедлайн: <strong>${h.deadline||'—'}</strong></span><span>${h.created}</span></div>
+    <div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Статус</label>
+      <select onchange="uHS(${h.id},this.value)" style="border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--text)">
+        ${Object.entries(SL).map(([v,l])=>`<option value="${v}" ${h.status===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Результат</label>
+      <textarea onchange="uHR(${h.id},this.value)" style="border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);width:100%;resize:vertical;min-height:50px">${h.result||''}</textarea>
+    </div>
+  </div>`).join('');
+}
+
+function showSetup(){document.getElementById('setupScreen').style.display='block';document.getElementById('mainApp').style.display='none';}
+
+async function connectSheet(){
+  const url=document.getElementById('setupUrl').value.trim();
+  if(!url.includes('script.google.com')){alert('Невірний URL');return;}
+  scriptUrl=url;localStorage.setItem('vrkings_url',url);
+  document.getElementById('setupScreen').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  await loadData();
+}
+
+window.addEventListener('load',()=>{
+  const u=localStorage.getItem('vrkings_url');
+  if(u){scriptUrl=u;document.getElementById('mainApp').style.display='block';loadData();}
+  else{document.getElementById('setupScreen').style.display='block';}
+});
+</script>
+</body>
+</html>
