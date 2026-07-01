@@ -393,6 +393,7 @@ async function loadData(){
   }catch(e){setSS('err','офлайн — локальні дані');}
   editKey=now();
   renderPulse();
+  loadInput();
   document.getElementById('curMonth').textContent=k2l(lk());
 }
 
@@ -434,7 +435,7 @@ function uTC(){
 function loadInput(){
   document.getElementById('inputMonthLbl').textContent=k2l(editKey);
   const d=months[editKey]||{};
-  FIELDS.forEach(f=>{const el=document.getElementById('i_'+f);if(el)el.value=(d[f]!==undefined&&d[f]!==0)?d[f]:'';});
+  FIELDS.forEach(f=>{const el=document.getElementById('i_'+f);if(el)el.value=(d[f]!==undefined)?d[f]:'';});
   document.getElementById('i_note').value=d.note||'';
   uTC();
   document.getElementById('saveInd').textContent='Зміни зберігаються автоматично';
