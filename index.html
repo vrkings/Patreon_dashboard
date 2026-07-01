@@ -358,6 +358,9 @@ const SEED=[
 let months={},hypos=[],editKey='',chts={},scriptUrl='',saveT=null;
 
 function now(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+// Дані завжди вносяться 1-го числа за ПОПЕРЕДНІЙ місяць — тому "поточний" робочий
+// місяць форми має вказувати на нього, а не на календарний поточний.
+function reportingMonth(){const d=new Date();d.setMonth(d.getMonth()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 function k2l(k){const[y,m]=k.split('-');return MUA[parseInt(m)-1]+' '+y;}
 function allKeys(){return Object.keys(months).sort();}
 function lk(){const k=allKeys();return k.length?k[k.length-1]:'';}
@@ -391,7 +394,7 @@ async function loadData(){
     if(d.hypos)hypos=d.hypos;
     setSS('ok','синхронізовано ✓');
   }catch(e){setSS('err','офлайн — локальні дані');}
-  editKey=now();
+  editKey=reportingMonth();
   renderPulse();
   loadInput();
   document.getElementById('curMonth').textContent=k2l(lk());
@@ -408,7 +411,8 @@ function readInput(){
   const k=editKey;if(!months[k])months[k]={key:k};
   FIELDS.forEach(f=>{
     const el=document.getElementById('i_'+f);
-    if(!el||el.value==='')return;
+    if(!el)return;
+    if(el.value===''){delete months[k][f];return;} // поле очищено вручну — прибираємо старе значення
     if(TEXT_FIELDS.includes(f)){months[k][f]=el.value;}
     else{months[k][f]=parseFloat(el.value)||0;}
   });
