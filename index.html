@@ -402,9 +402,15 @@ async function saveMonthRemote(key){
 }
 async function saveHyposRemote(){try{await apiFetch('saveHypos',{hypos});}catch(e){}}
 
+const TEXT_FIELDS=['shop_detail','yt_release','poll_result'];
 function readInput(){
   const k=editKey;if(!months[k])months[k]={key:k};
-  FIELDS.forEach(f=>{const el=document.getElementById('i_'+f);if(el&&el.value!=='')months[k][f]=parseFloat(el.value)||0;});
+  FIELDS.forEach(f=>{
+    const el=document.getElementById('i_'+f);
+    if(!el||el.value==='')return;
+    if(TEXT_FIELDS.includes(f)){months[k][f]=el.value;}
+    else{months[k][f]=parseFloat(el.value)||0;}
+  });
   months[k].note=document.getElementById('i_note').value;months[k].key=k;
 }
 
