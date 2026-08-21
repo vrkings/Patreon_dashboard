@@ -197,6 +197,50 @@ textarea{resize:vertical;min-height:64px}
     </div>
   </div>
   <div class="card">
+    <div class="ct">YouTube — розширена аналітика <span style="font-weight:400;text-transform:none;font-size:11px">(авто з YouTube Analytics API · можна редагувати вручну як fallback)</span></div>
+    <div class="fr3">
+      <div class="field"><label class="fl">Підписників всього</label><input type="number" id="i_yt_subs_total" oninput="qS()"></div>
+      <div class="field"><label class="fl">Нових підписників</label><input type="number" id="i_yt_subs_new" oninput="qS()"></div>
+      <div class="field"><label class="fl">Watch time (год)</label><input type="number" id="i_yt_watch_hours" oninput="qS()"></div>
+    </div>
+    <div class="fr3">
+      <div class="field"><label class="fl">Impressions</label><input type="number" id="i_yt_impressions" oninput="qS()"></div>
+      <div class="field"><label class="fl">CTR (%)</label><input type="number" id="i_yt_ctr" oninput="qS()"></div>
+      <div class="field"></div>
+    </div>
+    <div class="fr2">
+      <div class="field"><label class="fl">Перегляди — Video</label><input type="number" id="i_yt_views_video" oninput="qS()"></div>
+      <div class="field"><label class="fl">Перегляди — Shorts</label><input type="number" id="i_yt_views_shorts" oninput="qS()"></div>
+    </div>
+    <div class="fr2">
+      <div class="field"><label class="fl">Нові підписники — Video</label><input type="number" id="i_yt_subs_new_video" oninput="qS()"></div>
+      <div class="field"><label class="fl">Нові підписники — Shorts</label><input type="number" id="i_yt_subs_new_shorts" oninput="qS()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">GA4 — YouTube трафік <span style="font-weight:400;text-transform:none;font-size:11px">(авто з GA4 Data API, patreon.vrkings.tv)</span></div>
+    <div class="fr3">
+      <div class="field"><label class="fl">Сесії — youtube.com/referral</label><input type="number" id="i_ga_sessions_yt_referral_desktop" oninput="qS()"></div>
+      <div class="field"><label class="fl">Сесії — m.youtube.com/referral</label><input type="number" id="i_ga_sessions_yt_referral_mobile" oninput="qS()"></div>
+      <div class="field"><label class="fl">Сесії — pinned_comment (UTM)</label><input type="number" id="i_ga_sessions_yt_pinned_comment" oninput="qS()"></div>
+    </div>
+    <div class="fr3">
+      <div class="field"><label class="fl">Сесії з YT — разом</label><input type="number" id="i_ga_sessions_yt_total" oninput="qS()"></div>
+      <div class="field"><label class="fl">Воронка: page_view</label><input type="number" id="i_ga_funnel_pageview_yt" oninput="qS()"></div>
+      <div class="field"><label class="fl">Воронка: cta_click</label><input type="number" id="i_ga_funnel_cta_click_yt" oninput="qS()"></div>
+    </div>
+    <div class="fr6">
+      <div class="field"><label class="fl">Scroll 25%</label><input type="number" id="i_ga_scroll_25_yt" oninput="qS()"></div>
+      <div class="field"><label class="fl">Scroll 50%</label><input type="number" id="i_ga_scroll_50_yt" oninput="qS()"></div>
+      <div class="field"><label class="fl">Scroll 75%</label><input type="number" id="i_ga_scroll_75_yt" oninput="qS()"></div>
+      <div class="field"><label class="fl">Scroll 100%</label><input type="number" id="i_ga_scroll_100_yt" oninput="qS()"></div>
+      <div class="field"></div>
+      <div class="field"></div>
+    </div>
+    <div class="field"><label class="fl">CTA кнопки — розбивка <small>(тільки авто, скрипт перезаписує щомісяця)</small></label><div id="ctaButtonsDisplay" style="font-size:12px;color:var(--text2);padding:8px;background:var(--bg2);border-radius:var(--radius)">—</div></div>
+    <span id="autoSyncInd" class="save-ind" style="margin-top:4px"></span>
+  </div>
+  <div class="card">
     <div class="ct">Контент і трафік</div>
     <div class="fr3">
       <div class="field"><label class="fl">Відео на Patreon (шт)</label><input type="number" id="i_vids" oninput="qS()"></div>
@@ -341,7 +385,10 @@ const TIERS=['graf','baron','knight','warrior','lord','prince'];
 const TPRICES={graf:15,baron:10,knight:5,warrior:1,lord:7,prince:50};
 const TNAMES={graf:'Graf $15',baron:'Baron $10',knight:'Knight $5',warrior:'Warrior $1',lord:'Lord $7 ⚡',prince:'Prince $50'};
 const TCOLORS={graf:'#1D9E75',baron:'#5DCAA5',knight:'#85B7EB',warrior:'#B4B2A9',lord:'#FAC775',prince:'#EF9F27'};
-const FIELDS=['paid','new_paid','churned','free','new_free','annual','net','gross_shop','shop_detail','site_visitors','yt_views','yt_clicks','yt_release','tw_clicks','reddit_clicks','ig_clicks','vids','poll_result','t_graf','t_baron','t_knight','t_warrior','t_lord','t_prince'];
+const FIELDS=['paid','new_paid','churned','free','new_free','annual','net','gross_shop','shop_detail','site_visitors','yt_views','yt_clicks','yt_release','tw_clicks','reddit_clicks','ig_clicks','vids','poll_result','t_graf','t_baron','t_knight','t_warrior','t_lord','t_prince',
+  'yt_subs_total','yt_subs_new','yt_watch_hours','yt_impressions','yt_ctr','yt_views_video','yt_views_shorts','yt_subs_new_video','yt_subs_new_shorts',
+  'ga_sessions_yt_referral_desktop','ga_sessions_yt_referral_mobile','ga_sessions_yt_pinned_comment','ga_sessions_yt_total',
+  'ga_scroll_25_yt','ga_scroll_50_yt','ga_scroll_75_yt','ga_scroll_100_yt','ga_funnel_pageview_yt','ga_funnel_cta_click_yt'];
 const SL={testing:'В тестуванні',confirmed:'Підтверджено ✓',rejected:'Відкинуто',paused:'Пауза'};
 const SC={testing:'ty',confirmed:'tg',rejected:'tr',paused:'tn'};
 
@@ -442,7 +489,22 @@ function loadInput(){
   FIELDS.forEach(f=>{const el=document.getElementById('i_'+f);if(el)el.value=(d[f]!==undefined)?d[f]:'';});
   document.getElementById('i_note').value=d.note||'';
   uTC();
+  renderCtaButtons(d);
+  renderAutoSyncInd(d);
   document.getElementById('saveInd').textContent='Зміни зберігаються автоматично';
+}
+
+// ga_cta_buttons_yt — {button_value: count}, пишеться тільки sync_youtube_ga4.py,
+// тому не входить у FIELDS (generic input-loop працює лише з плоскими числами/текстом).
+function renderCtaButtons(d){
+  const el=document.getElementById('ctaButtonsDisplay');if(!el)return;
+  const b=d.ga_cta_buttons_yt;
+  if(!b||!Object.keys(b).length){el.textContent='Немає даних';return;}
+  el.innerHTML=Object.entries(b).sort((a,c)=>c[1]-a[1]).map(([k,v])=>`<div class="trow" style="padding:4px 0;border:none"><span>${k}</span><span style="font-weight:500">${v}</span></div>`).join('');
+}
+function renderAutoSyncInd(d){
+  const el=document.getElementById('autoSyncInd');if(!el)return;
+  el.textContent=d.auto_sync&&d.auto_sync.at?('🤖 Останній авто-синк YouTube/GA4: '+new Date(d.auto_sync.at).toLocaleString('uk-UA')):'Ще не синхронізувалось автоматично';
 }
 
 function prevMonth(){const[y,m]=editKey.split('-');let mo=parseInt(m)-1,yr=parseInt(y);if(mo<1){mo=12;yr--;}editKey=yr+'-'+String(mo).padStart(2,'0');loadInput();}

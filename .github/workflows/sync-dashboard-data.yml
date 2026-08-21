@@ -1,0 +1,62 @@
+name: Sync YouTube + GA4 dashboard data
+
+on:
+  schedule:
+    # 1-го числа щомісяця, 06:00 UTC — тягне дані за ПОПЕРЕДНІЙ календарний місяць
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Місяць для бекфілу, формат YYYY-MM (порожньо = попередній місяць)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Тільки порахувати й показати в лозі — нічого не писати в Sheet'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      allow_zero_traffic:
+        description: 'Дозволити 0 GA4 YouTube-трафіку без падіння (рідкісний випадок)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sync
+        env:
+          SCRIPT_URL: ${{ secrets.SCRIPT_URL }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+          GA4_SERVICE_ACCOUNT_JSON: ${{ secrets.GA4_SERVICE_ACCOUNT_JSON }}
+          GA4_SCROLL_DEPTH_PARAM: ${{ secrets.GA4_SCROLL_DEPTH_PARAM }}
+          GA4_CTA_BUTTON_PARAM: ${{ secrets.GA4_CTA_BUTTON_PARAM }}
+        run: |
+          set -e
+          ARGS=""
+          MONTH="${{ github.event.inputs.month }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          ALLOW_ZERO="${{ github.event.inputs.allow_zero_traffic }}"
+          if [ -n "$MONTH" ]; then ARGS="$ARGS --month $MONTH"; fi
+          if [ "$DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "$ALLOW_ZERO" = "true" ]; then ARGS="$ARGS --allow-zero-traffic"; fi
+          echo "Running: python sync_youtube_ga4.py $ARGS"
+          python sync_youtube_ga4.py $ARGS

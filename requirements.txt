@@ -1,0 +1,5 @@
+requests>=2.31,<3
+google-auth>=2.29,<3
+google-auth-oauthlib>=1.2,<2
+google-api-python-client>=2.126,<3
+google-analytics-data>=0.18,<1
