@@ -178,7 +178,7 @@ def fetch_youtube_metrics(start: dt.date, end: dt.date, month_key: str) -> dict[
             ids=channel_ref,
             startDate=start.isoformat(),
             endDate=end.isoformat(),
-            metrics="impressions,impressionsClickThroughRate",
+            metrics="videoThumbnailImpressions,videoThumbnailImpressionsClickRate",
         ).execute()
     except Exception as e:  # noqa: BLE001
         raise SyncError(f"YouTube Analytics API (impressions) помилка: {e}") from e
