@@ -511,7 +511,12 @@ def sheet_save_month(script_url: str, month_key: str, data: dict[str, Any]) -> N
         resp = r.json()
     except Exception as e:  # noqa: BLE001
         raise SyncError(f"Не вдалось записати в Sheet через Apps Script (saveMonth): {e}") from e
-    if not resp.get("ok"):
+    # Реальний контракт задеплоєного Code.gs повертає {"success": true, "action": ...,
+    # "row": ...} (звірено напряму з логу продакшн-запуску 23.08.2026 — Apps Script
+    # написав рядок 4 і повернув саме "success", а не "ok", як був старий приклад коду).
+    # Перевіряємо обидва ключі — якщо колись Code.gs відкотять до старого контракту
+    # {"ok": true}, скрипт не почне хибно падати на успішних записах.
+    if not (resp.get("success") or resp.get("ok")):
         raise SyncError(f"Apps Script saveMonth повернув помилку: {resp}")
 
 
