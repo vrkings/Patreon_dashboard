@@ -1,193 +1,583 @@
-# YouTube + GA4 авто-імпорт — налаштування
+#!/usr/bin/env python3
+"""
+sync_youtube_ga4.py — VR KINGS CEO Dashboard: авто-імпорт YouTube + GA4
 
-Що це: `sync_youtube_ga4.py` + `.github/workflows/sync-dashboard-data.yml` тягнуть
-YouTube Analytics і GA4 дані за минулий місяць і пишуть їх у той самий Google Sheet,
-яким користується дашборд (через існуючий Apps Script Web App — `Code.gs` **не змінено**).
-Patreon-поля цей процес не чіпає.
+Тягне місячні метрики з YouTube Analytics API (v2) та Google Analytics 4
+Data API і записує їх у ТОЙ САМИЙ Google Sheet, яким уже користується
+CEO-дашборд (vrkings/Patreon_dashboard), через існуючий Apps Script Web App
+(action=saveMonth) — той самий endpoint, який викликає index.html.
 
-⚠️ **Impressions/CTR (`yt_impressions`, `yt_ctr`) НЕ автоматизовано — свідомо.** Ці метрики
-(`videoThumbnailImpressions`, `videoThumbnailImpressionsClickRate`) не доступні через простий
-`reports.query()`, яким побудований весь інший скрипт — вони є тільки через bulk **YouTube
-Reporting API** (створити job → зачекати генерацію звіту → скачати CSV), це окрема й значно
-важча механіка. Щоб не блокувати нею решту автоматики, ці два поля лишились **ручними** —
-такими ж, якими були до цієї задачі (вносиш у "Внести дані" як і раніше). Можна додати
-підтримку через YouTube Reporting API окремою задачею пізніше, якщо знадобиться.
+НІЧОГО не змінює в Code.gs і НЕ ЧІПАЄ Patreon-поля (paid, churned, net,
+тіри тощо) — вони й далі вносяться вручну на вкладці "Внести дані".
 
-Нижче — усе, що треба зробити вручну ОДИН РАЗ, покроково.
+Схема: Google Sheet "months" зберігає одну JSON-структуру на місяць
+(ключ 'YYYY-MM'). Цей скрипт лише ДОДАЄ/ОНОВЛЮЄ такі поля в тій самій
+структурі (namespaced, щоб нічого не зламати):
 
----
+  YouTube (YouTube Analytics API):
+    yt_views_video, yt_views_shorts   — перегляди, окремо video/shorts
+    yt_subs_new_video, yt_subs_new_shorts — нові підписники, окремо
+    yt_subs_new                       — нових підписників за період (сумарно)
+    yt_subs_total                     — підписників всього (снепшот, див. КАВЕАТ нижче)
+    yt_watch_hours                    — watch time, годин
+    yt_views                          — (існуюче поле) авто-перезаписується
+                                         як yt_views_video + yt_views_shorts,
+                                         щоб старі графіки/картки не зламались
 
-## 1. Google Cloud проєкт
+  YouTube — НЕ автоматизовано (свідомо, лишено ручним):
+    yt_impressions, yt_ctr            — videoThumbnailImpressions /
+                                         videoThumbnailImpressionsClickRate —
+                                         це не reports.query() метрики, а
+                                         частина "Reach reports" з bulk
+                                         YouTube Reporting API (job → чекати
+                                         генерацію → CSV) — інша механіка, ніж
+                                         решта скрипта. Поля лишились у Sheet/
+                                         index.html як ручний fallback-інпут,
+                                         яким і були до цієї автоматизації.
+                                         Можна додати окремою задачею пізніше.
 
-1. [console.cloud.google.com](https://console.cloud.google.com) → створити проєкт (або взяти існуючий, якщо вже є для vrkings.tv).
-2. **APIs & Services → Library** → увімкнути:
-   - **YouTube Analytics API**
-   - **YouTube Data API v3**
-   - **Google Analytics Data API**
+  GA4 (GA4 Data API, property patreon.vrkings.tv):
+    ga_sessions_yt_referral_desktop   — сесії youtube.com / referral
+    ga_sessions_yt_referral_mobile    — сесії m.youtube.com / referral
+    ga_sessions_yt_pinned_comment     — сесії youtube / pinned_comment (UTM)
+    ga_sessions_yt_total              — сума трьох вище
+    ga_scroll_25_yt / _50_yt / _75_yt / _100_yt — воронка scroll_depth, YT-сегмент
+    ga_funnel_pageview_yt             — page_view, YT-сегмент (старт воронки)
+    ga_funnel_cta_click_yt            — cta_click, YT-сегмент (кінець воронки)
+    ga_cta_buttons_yt                 — {button_value: count} — розбивка по cta_button
+    site_visitors                     — (існуюче поле) активні користувачі GA4 за період
 
----
+  Службове:
+    auto_sync — {at, period:{start,end}, source} — коли й за який період
+                востаннє відпрацювала автоматика (видно в UI дашборда)
 
-## 2. YouTube Analytics — OAuth для власного каналу
+КАВЕАТ по yt_subs_total: YouTube Data API віддає лише ПОТОЧНИЙ (на момент
+запиту) subscriberCount — не історичний "на кінець місяця X". Для
+дефолтного запуску (попередній місяць, 1-го числа) це прийнятна апроксимація
+(похибка — кілька днів). Для бекфілу СТАРИХ місяців (--month багато місяців
+тому) це значення буде НЕ історичним, а поточним — скрипт логує явне
+попередження в такому випадку і НЕ видає це за факт.
 
-Сервісний акаунт не підійде для аналітики персонального/brand-каналу — потрібен OAuth
-від акаунту, який керує каналом VR KINGS.
+Жодного тихого запису нулів: якщо будь-який виклик API падає, або дані
+виглядають підозріло порожніми — скрипт зупиняється з ненульовим кодом
+виходу і НЕ чіпає існуюче значення в Sheet.
 
-1. **APIs & Services → OAuth consent screen**:
-   - User type: External (якщо це не Google Workspace акаунт) → Create.
-   - App name: будь-яке (напр. "VR Kings Dashboard Sync"), підтримка/email — свій.
-   - Scopes: можна пропустити тут, додамо нижче вручну.
-   - Test users: додати email акаунту, що керує YouTube-каналом.
-2. **APIs & Services → Credentials → Create Credentials → OAuth client ID**:
-   - Application type: **Desktop app**.
-   - Збережи **Client ID** і **Client Secret**.
-3. Отримати **refresh token** (одноразово, з машини де є браузер):
-   ```bash
-   pip install google-auth-oauthlib
-   python3 - <<'EOF'
-   from google_auth_oauthlib.flow import InstalledAppFlow
-   flow = InstalledAppFlow.from_client_config(
-       {"installed": {
-           "client_id": "ТВІЙ_CLIENT_ID",
-           "client_secret": "ТВІЙ_CLIENT_SECRET",
-           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-           "token_uri": "https://oauth2.googleapis.com/token",
-       }},
-       scopes=[
-           "https://www.googleapis.com/auth/yt-analytics.readonly",
-           "https://www.googleapis.com/auth/youtube.readonly",
-       ],
-   )
-   creds = flow.run_local_server(port=0)
-   print("REFRESH TOKEN:", creds.refresh_token)
-   EOF
-   ```
-   Відкриється браузер → увійти акаунтом, що керує YouTube-каналом VR KINGS → дозволити доступ.
-   Скрипт виведе `REFRESH TOKEN: 1//...` — це і є `YOUTUBE_REFRESH_TOKEN`.
-4. `YOUTUBE_CHANNEL_ID` — знайти в YouTube Studio → Налаштування → Канал → Основні →
-   "ID каналу" (формат `UCxxxxxxxxxxxxxxxxxxxxxx`).
+Використання:
+    python sync_youtube_ga4.py                       # попередній календарний місяць
+    python sync_youtube_ga4.py --month 2026-06        # бекфіл конкретного місяця
+    python sync_youtube_ga4.py --month 2026-06 --dry-run
+    python sync_youtube_ga4.py --allow-zero-traffic   # дозволити нульовий GA4 YT-трафік
+                                                        # (замість помилки) — для рідкісних
+                                                        # місяців, коли це справді очікувано
 
----
+Змінні середовища: див. .env.example
+"""
 
-## 3. GA4 — сервісний акаунт (простіше за OAuth, не протухає)
+from __future__ import annotations
 
-1. **APIs & Services → Credentials → Create Credentials → Service account**:
-   - Ім'я: напр. `vrkings-dashboard-sync`.
-   - Ролей на рівні проєкту не потрібно — доступ дається окремо в GA4 (крок нижче).
-   - Створи → **Keys → Add key → JSON** → завантажиться файл `*.json`.
-2. Відкрий цей JSON-файл, скопіюй увесь вміст (буде потрібен як `GA4_SERVICE_ACCOUNT_JSON`).
-3. У **Google Analytics** ([analytics.google.com](https://analytics.google.com)):
-   - Admin → property **patreon.vrkings.tv** → **Property Access Management**.
-   - **+ → Add users** → встав `client_email` з JSON-ключа (виглядає як
-     `vrkings-dashboard-sync@ТВІЙ-ПРОЄКТ.iam.gserviceaccount.com`).
-   - Роль: **Viewer** (Data API — тільки читання, більше не треба).
-4. `GA4_PROPERTY_ID` — Admin → Property Settings → **PROPERTY ID** (просто число, без "G-").
+import argparse
+import calendar
+import datetime as dt
+import json
+import logging
+import os
+import sys
+from typing import Any
 
-### 3.1 Custom dimensions для scroll_depth і cta_click — підтверджено в GA4 UI (21.08.2026)
+import requests
 
-GA4 Data API не бачить параметри подій, якщо вони не зареєстровані як **custom dimensions**.
-Звірено напряму в GA4 → Reports → Engagement → Events і в Custom definitions — реальна
-структура на patreon.vrkings.tv:
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s")
+log = logging.getLogger("sync_youtube_ga4")
 
-| Що | Назва події (`event_name`) | Custom parameter (event-scoped) |
-|---|---|---|
-| Скрол сторінки | `scroll_depth` | `depth_percent` (значення 25/50/75/100) |
-| Клік по CTA-кнопці | `cta_click` | `cta_button` (значення типу `get_instant_access_hero`, `get_instant_access_yt_...`, `get_instant_access_bot...`, `start_for_5_pricing`, `join_for_15_pricing`, `become_vr_king_pricing`, `get_full_library_pricing`) |
+# GA4: YouTube-атрибутовані (sessionSource, sessionMedium) пари.
+# Онови, якщо на patreon.vrkings.tv зміниться UTM-схема лінків з YouTube.
+GA4_YT_SOURCE_MEDIUM = {
+    "ga_sessions_yt_referral_desktop": ("youtube.com", "referral"),
+    "ga_sessions_yt_referral_mobile": ("m.youtube.com", "referral"),
+    "ga_sessions_yt_pinned_comment": ("youtube", "pinned_comment"),
+}
 
-Це вже прописано як дефолти в `.env.example` і в самому скрипті
-(`GA4_SCROLL_DEPTH_PARAM=depth_percent`, `GA4_CTA_BUTTON_PARAM=cta_button`, подія для
-розбивки кнопок — `cta_click`). Секрети окремо перевизначати не обов'язково, якщо
-на сайті нічого не зміниться.
+SCROLL_BUCKETS = ["25", "50", "75", "100"]
 
-⚠️ **`cta_button` — це НЕ назва події**, а назва параметра всередині події `cta_click`.
-На цій же події `cta_click` зареєстровано ще два custom dimensions — `cta_value` і
-`button_text` (видимий текст кнопки) — вони тут не використовуються, для розбивки
-"яка кнопка скільки кліків" потрібен саме `cta_button`.
 
-⚠️ **`scroll_depth` — це кастомна подія сайту, не плутати зі стандартною GA4-подією
-`scroll`** (та вбудована, спрацьовує один раз на 90% скролу, без порогів 25/50/75/100).
+class SyncError(Exception):
+    """Дані не заслуговують довіри — не пишемо їх у Sheet."""
 
-Перевір, що на GA4 стороні обидва dimension зареєстровані:
-- **Admin → Custom definitions → Custom dimensions** → має бути event-scoped dimension
-  для `depth_percent` (подія `scroll_depth`) і для `cta_button` (подія `cta_click`).
-- Якщо немає — **Create custom dimension**, Scope: Event, Event parameter: точно
-  `depth_percent` / `cta_button`.
-- Custom dimension починає збирати дані **тільки з моменту реєстрації вперед** — заднім
-  числом GA4 їх не порахує. Якщо їх ще нема — зареєструй зараз, перші місяці після
-  реєстрації можуть бути 0, доки GA4 не почне їх писати.
 
-Якщо колись на сайті зміняться назви подій/параметрів — онови секрети
-`GA4_SCROLL_DEPTH_PARAM`/`GA4_CTA_BUTTON_PARAM`, а назву події `cta_click` (вона
-захардкожена в `sync_youtube_ga4.py`, бо на відміну від параметрів це не typo-схильна
-конфігурація) онови прямо в коді функції `fetch_ga4_cta_buttons_yt`.
+# --------------------------------------------------------------------------
+# Утиліти дат / env
+# --------------------------------------------------------------------------
 
----
+def require_env(name: str) -> str:
+    v = os.environ.get(name)
+    if not v:
+        raise SyncError(f"Відсутня обов'язкова змінна середовища: {name} (див. .env.example)")
+    return v
 
-## 4. Google Sheet — доступ
 
-Нічого додатково робити не треба: скрипт пише через **той самий** Apps Script Web App
-URL, що вже вписаний у дашборд (`localStorage.vrkings_url` в браузері, або подивись у
-Apps Script → Deploy → Manage deployments). Скопіюй цей URL у секрет `SCRIPT_URL`.
+def month_bounds(month_key: str) -> tuple[dt.date, dt.date]:
+    y, m = (int(x) for x in month_key.split("-"))
+    start = dt.date(y, m, 1)
+    end = dt.date(y, m, calendar.monthrange(y, m)[1])
+    return start, end
 
-⚠️ Побічне спостереження (не в рамках цієї задачі, але вартo знати): Web App задеплоєно
-з "Anyone" без автентифікації — будь-хто, хто дізнається URL, може писати в Sheet. Це вже
-так і без цієї автоматизації; варто колись розглянути токен/секрет у самому запиті.
 
----
+def previous_month_key(today: dt.date | None = None) -> str:
+    today = today or dt.date.today()
+    first_of_this_month = today.replace(day=1)
+    last_of_prev = first_of_this_month - dt.timedelta(days=1)
+    return f"{last_of_prev.year}-{last_of_prev.month:02d}"
 
-## 5. Секрети в GitHub Actions
 
-Репозиторій `vrkings/Patreon_dashboard` на GitHub → **Settings → Secrets and variables
-→ Actions → New repository secret**. Додати кожен окремо:
+def months_ago(month_key: str, today: dt.date | None = None) -> int:
+    today = today or dt.date.today()
+    y, m = (int(x) for x in month_key.split("-"))
+    return (today.year - y) * 12 + (today.month - m)
 
-| Secret | Значення |
-|---|---|
-| `SCRIPT_URL` | Apps Script Web App URL (крок 4) |
-| `YOUTUBE_CHANNEL_ID` | з YouTube Studio |
-| `YOUTUBE_CLIENT_ID` | з OAuth client (крок 2) |
-| `YOUTUBE_CLIENT_SECRET` | з OAuth client (крок 2) |
-| `YOUTUBE_REFRESH_TOKEN` | отриманий одноразовим скриптом (крок 2.3) |
-| `GA4_PROPERTY_ID` | число з GA4 Admin |
-| `GA4_SERVICE_ACCOUNT_JSON` | увесь вміст JSON-ключа, одним блоком |
-| `GA4_SCROLL_DEPTH_PARAM` | назва параметра (перевір по коду сайту) |
-| `GA4_CTA_BUTTON_PARAM` | назва параметра (перевір по коду сайту) |
 
----
+# --------------------------------------------------------------------------
+# YouTube Analytics API (OAuth — власний канал)
+# --------------------------------------------------------------------------
 
-## 6. Перший запуск і перевірка
+def youtube_clients():
+    from google.oauth2.credentials import Credentials as OAuthCredentials
+    from googleapiclient.discovery import build as gbuild
 
-1. GitHub → вкладка **Actions** → **Sync YouTube + GA4 dashboard data** → **Run workflow**.
-   - Постав `dry_run = true` для першого разу — порахує все і покаже в логах, нічого не запише.
-   - Залиш `month` порожнім (візьме попередній місяць) або встав конкретний `YYYY-MM` для бекфілу.
-2. Відкрий лог запуску — там будуть підсумкові числа (`YouTube OK: ...`, `GA4 OK: ...`).
-3. Звір ці числа з реальністю:
-   - **YouTube Studio → Analytics → Overview**, вибрати той самий місяць →
-     звірити перегляди, watch time, підписників. (Impressions/CTR тут НЕ звіряти — це поле
-     й далі вноситься вручну, скрипт його не чіпає, див. примітку на початку файлу.)
-   - **YouTube Studio → Analytics → Content → Shorts** вкладка — звірити Shorts-перегляди окремо.
-   - **GA4 → Reports → Acquisition → Traffic acquisition**, фільтр по датах місяця →
-     звірити сесії по `youtube.com/referral`, `m.youtube.com/referral`.
-   - **GA4 → Explore** (або Reports → Engagement → Events) → звірити кількість подій
-     `scroll_depth`, `cta_click`, `cta_button` за той самий період.
-4. Якщо числа збігаються (з точністю до відсотків — атрибуція GA4 ніколи не буде 1:1
-   з ручним підрахунком) — запусти ще раз **без** `dry_run` (`false`), щоб реально записати.
-5. Відкрий дашборд на Vercel → вкладка "Внести дані" → обери той місяць → перевір, що нові
-   поля (YouTube — розширена аналітика / GA4 — YouTube трафік) заповнились, і що
-   Patreon-поля (paid, churned, net, тіри) залишились такими, якими були.
+    creds = OAuthCredentials(
+        None,
+        refresh_token=require_env("YOUTUBE_REFRESH_TOKEN"),
+        client_id=require_env("YOUTUBE_CLIENT_ID"),
+        client_secret=require_env("YOUTUBE_CLIENT_SECRET"),
+        token_uri="https://oauth2.googleapis.com/token",
+        scopes=[
+            "https://www.googleapis.com/auth/yt-analytics.readonly",
+            "https://www.googleapis.com/auth/youtube.readonly",
+        ],
+    )
+    yta = gbuild("youtubeAnalytics", "v2", credentials=creds, cache_discovery=False)
+    yt_data = gbuild("youtube", "v3", credentials=creds, cache_discovery=False)
+    return yta, yt_data
 
-Якщо workflow впав червоним — це очікувана поведінка при проблемі з даними чи доступом
-(скрипт навмисно НЕ пише нулі в Sheet). Дивись повідомлення в кінці логу — там прямо
-написано що саме не так (неправильний property ID, немає доступу сервісного акаунту,
-не зареєстрована custom dimension, і т.д.).
 
----
+def fetch_youtube_metrics(start: dt.date, end: dt.date, month_key: str) -> dict[str, Any]:
+    yta, yt_data = youtube_clients()
+    channel_id = require_env("YOUTUBE_CHANNEL_ID")
+    channel_ref = f"channel=={channel_id}"
 
-## 7. Щомісячний режим роботи
+    # 1) Базові метрики: перегляди, watch time, підписники gained/lost
+    try:
+        basic = yta.reports().query(
+            ids=channel_ref,
+            startDate=start.isoformat(),
+            endDate=end.isoformat(),
+            metrics="views,estimatedMinutesWatched,subscribersGained,subscribersLost",
+        ).execute()
+    except Exception as e:  # noqa: BLE001 — усе, що впало в API-виклику, фатальне для sync
+        raise SyncError(f"YouTube Analytics API (basic metrics) помилка: {e}") from e
 
-- 1-го числа щомісяця о 06:00 UTC workflow запускається сам, тягне попередній місяць.
-- Manual-поля (site_visitors, yt_views, yt_clicks, tw_clicks, reddit_clicks, ig_clicks,
-  усі Patreon-поля) і далі вносяться вручну, як і раніше — автоматика їх не чіпає
-  (крім `yt_views` і `site_visitors`, які тепер авто-перезаписуються з YouTube/GA4 —
-  якщо треба відкоригувати вручну, це все одно можна зробити в UI, наступний авто-синк
-  просто перезапише їх знову за фактичними даними API).
-- Якщо API одного місяця недоступне/впало — попередні збережені дані НЕ зникають,
-  просто цей місяць лишається без авто-оновлення, внось вручну як робили раніше.
+    if not basic.get("rows"):
+        raise SyncError(
+            f"YouTube Analytics API не повернув жодного рядка за {start}..{end}. "
+            "Скоріш за все неправильний YOUTUBE_CHANNEL_ID або немає доступу токена до цього каналу."
+        )
+    views, watched_min, subs_gained, subs_lost = basic["rows"][0]
+
+    # 2) Impressions / CTR — СВІДОМО НЕ АВТОМАТИЗОВАНО.
+    #    videoThumbnailImpressions / videoThumbnailImpressionsClickRate — це не
+    #    reports.query()-метрики, а частина "Reach reports" з bulk YouTube
+    #    Reporting API (job → чекати генерацію → скачати CSV) — інша, значно
+    #    важча механіка, ніж решта цього скрипта. Щоб не блокувати нею решту
+    #    автоматики, поля yt_impressions/yt_ctr лишені РУЧНИМИ (fallback-input
+    #    в index.html як і раніше) — не заповнюються тут. Можна додати окремою
+    #    задачею через YouTube Reporting API, якщо знадобиться.
+
+    # 3) Video vs Shorts розбивка
+    try:
+        by_type = yta.reports().query(
+            ids=channel_ref,
+            startDate=start.isoformat(),
+            endDate=end.isoformat(),
+            metrics="views,subscribersGained",
+            dimensions="creatorContentType",
+        ).execute()
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(f"YouTube Analytics API (creatorContentType) помилка: {e}") from e
+
+    views_by_type = {"VIDEO": 0, "SHORTS": 0}
+    subs_by_type = {"VIDEO": 0, "SHORTS": 0}
+    for row in by_type.get("rows", []):
+        ctype, v, sg = row[0], row[1], row[2]
+        if ctype in views_by_type:
+            views_by_type[ctype] += v
+            subs_by_type[ctype] += sg
+
+    # 4) Поточний total підписників (снепшот "зараз", не історичний — див. докстрінг)
+    try:
+        ch = yt_data.channels().list(part="statistics", id=channel_id).execute()
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(f"YouTube Data API (channels.list) помилка: {e}") from e
+    items = ch.get("items", [])
+    if not items:
+        raise SyncError(f"YouTube Data API не знайшов канал {channel_id}.")
+    subs_total = int(items[0]["statistics"]["subscriberCount"])
+
+    age = months_ago(month_key)
+    if age > 1:
+        log.warning(
+            "yt_subs_total — це ПОТОЧНА кількість підписників (YouTube API не дає історичних "
+            "знімків), а бекфілиться місяць %s (%s міс. тому). Число НЕ відображає стан на кінець "
+            "того місяця — онови вручну, якщо є точніші дані з YouTube Studio за той період.",
+            month_key, age,
+        )
+
+    return {
+        "yt_views_video": int(views_by_type["VIDEO"]),
+        "yt_views_shorts": int(views_by_type["SHORTS"]),
+        "yt_subs_new_video": int(subs_by_type["VIDEO"]),
+        "yt_subs_new_shorts": int(subs_by_type["SHORTS"]),
+        "yt_subs_new": int(subs_gained) - int(subs_lost),
+        "yt_subs_total": subs_total,
+        "yt_watch_hours": round(int(watched_min) / 60, 1),
+    }
+
+
+def sanity_check_youtube(m: dict[str, Any]) -> None:
+    total_views = m["yt_views_video"] + m["yt_views_shorts"]
+    if total_views <= 0:
+        raise SyncError(
+            "YouTube: 0 переглядів за весь період — майже напевно помилка "
+            "(неправильний канал, зламаний OAuth-токен, чи період без даних). Нічого не записано."
+        )
+    if m["yt_subs_total"] <= 0:
+        raise SyncError("YouTube: subscriberCount <= 0 — підозрілі дані з API. Нічого не записано.")
+
+
+# --------------------------------------------------------------------------
+# GA4 Data API (service account)
+# --------------------------------------------------------------------------
+
+def ga4_client():
+    from google.analytics.data_v1beta import BetaAnalyticsDataClient
+    from google.oauth2 import service_account
+
+    raw = require_env("GA4_SERVICE_ACCOUNT_JSON")
+    try:
+        info = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise SyncError(
+            "GA4_SERVICE_ACCOUNT_JSON не парситься як JSON — переконайся, що весь ключ "
+            "сервісного акаунту вставлено одним рядком без переносів."
+        ) from e
+    creds = service_account.Credentials.from_service_account_info(
+        info, scopes=["https://www.googleapis.com/auth/analytics.readonly"]
+    )
+    return BetaAnalyticsDataClient(credentials=creds)
+
+
+def _yt_source_medium_filter():
+    """OR-фільтр по (sessionSource, sessionMedium) для трьох YouTube-джерел."""
+    from google.analytics.data_v1beta.types import Filter, FilterExpression, FilterExpressionList
+
+    ors = []
+    for source, medium in GA4_YT_SOURCE_MEDIUM.values():
+        ors.append(
+            FilterExpression(
+                and_group=FilterExpressionList(
+                    expressions=[
+                        FilterExpression(
+                            filter=Filter(
+                                field_name="sessionSource",
+                                string_filter=Filter.StringFilter(value=source),
+                            )
+                        ),
+                        FilterExpression(
+                            filter=Filter(
+                                field_name="sessionMedium",
+                                string_filter=Filter.StringFilter(value=medium),
+                            )
+                        ),
+                    ]
+                )
+            )
+        )
+    return FilterExpression(or_group=FilterExpressionList(expressions=ors))
+
+
+def _event_filter(event_name: str):
+    from google.analytics.data_v1beta.types import Filter, FilterExpression
+
+    return FilterExpression(
+        filter=Filter(field_name="eventName", string_filter=Filter.StringFilter(value=event_name))
+    )
+
+
+def _and_filter(*parts):
+    from google.analytics.data_v1beta.types import FilterExpression, FilterExpressionList
+
+    return FilterExpression(and_group=FilterExpressionList(expressions=list(parts)))
+
+
+def fetch_ga4_sessions_by_source(client, property_id: str, start: dt.date, end: dt.date) -> dict[str, int]:
+    from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
+
+    req = RunReportRequest(
+        property=f"properties/{property_id}",
+        dimensions=[Dimension(name="sessionSource"), Dimension(name="sessionMedium")],
+        metrics=[Metric(name="sessions")],
+        date_ranges=[DateRange(start_date=start.isoformat(), end_date=end.isoformat())],
+    )
+    try:
+        resp = client.run_report(req)
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(f"GA4 Data API (sessions by source) помилка: {e}") from e
+
+    out = dict.fromkeys(GA4_YT_SOURCE_MEDIUM, 0)
+    for row in resp.rows:
+        src, med = row.dimension_values[0].value, row.dimension_values[1].value
+        sessions = int(row.metric_values[0].value)
+        for key, (s, m) in GA4_YT_SOURCE_MEDIUM.items():
+            if src == s and med == m:
+                out[key] += sessions
+    out["ga_sessions_yt_total"] = sum(out.values())
+    return out
+
+
+def fetch_ga4_site_visitors(client, property_id: str, start: dt.date, end: dt.date) -> int:
+    from google.analytics.data_v1beta.types import DateRange, Metric, RunReportRequest
+
+    req = RunReportRequest(
+        property=f"properties/{property_id}",
+        metrics=[Metric(name="activeUsers")],
+        date_ranges=[DateRange(start_date=start.isoformat(), end_date=end.isoformat())],
+    )
+    try:
+        resp = client.run_report(req)
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(f"GA4 Data API (activeUsers) помилка: {e}") from e
+    if not resp.rows:
+        return 0
+    return int(resp.rows[0].metric_values[0].value)
+
+
+def fetch_ga4_scroll_depth_yt(client, property_id: str, start: dt.date, end: dt.date, scroll_param: str) -> dict[str, int]:
+    from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
+
+    dim_name = f"customEvent:{scroll_param}"
+    req = RunReportRequest(
+        property=f"properties/{property_id}",
+        dimensions=[Dimension(name=dim_name)],
+        metrics=[Metric(name="eventCount")],
+        date_ranges=[DateRange(start_date=start.isoformat(), end_date=end.isoformat())],
+        dimension_filter=_and_filter(_event_filter("scroll_depth"), _yt_source_medium_filter()),
+    )
+    try:
+        resp = client.run_report(req)
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(
+            f"GA4 Data API (scroll_depth) помилка: {e}. Якщо помилка про невідомий вимір "
+            f"'{dim_name}' — параметр події не зареєстровано як custom dimension у "
+            "GA4 → Admin → Custom definitions (див. README_YOUTUBE_GA4_SYNC.md)."
+        ) from e
+
+    out = {f"ga_scroll_{b}_yt": 0 for b in SCROLL_BUCKETS}
+    for row in resp.rows:
+        val = row.dimension_values[0].value.strip()
+        count = int(row.metric_values[0].value)
+        key = f"ga_scroll_{val}_yt"
+        if key in out:
+            out[key] += count
+    return out
+
+
+def fetch_ga4_funnel_yt(client, property_id: str, start: dt.date, end: dt.date) -> dict[str, int]:
+    from google.analytics.data_v1beta.types import DateRange, Metric, RunReportRequest
+
+    out = {}
+    for field, event in (("ga_funnel_pageview_yt", "page_view"), ("ga_funnel_cta_click_yt", "cta_click")):
+        req = RunReportRequest(
+            property=f"properties/{property_id}",
+            metrics=[Metric(name="eventCount")],
+            date_ranges=[DateRange(start_date=start.isoformat(), end_date=end.isoformat())],
+            dimension_filter=_and_filter(_event_filter(event), _yt_source_medium_filter()),
+        )
+        try:
+            resp = client.run_report(req)
+        except Exception as e:  # noqa: BLE001
+            raise SyncError(f"GA4 Data API (funnel:{event}) помилка: {e}") from e
+        out[field] = int(resp.rows[0].metric_values[0].value) if resp.rows else 0
+    return out
+
+
+def fetch_ga4_cta_buttons_yt(client, property_id: str, start: dt.date, end: dt.date, button_param: str) -> dict[str, int]:
+    from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
+
+    dim_name = f"customEvent:{button_param}"
+    req = RunReportRequest(
+        property=f"properties/{property_id}",
+        dimensions=[Dimension(name=dim_name)],
+        metrics=[Metric(name="eventCount")],
+        date_ranges=[DateRange(start_date=start.isoformat(), end_date=end.isoformat())],
+        dimension_filter=_and_filter(_event_filter("cta_click"), _yt_source_medium_filter()),
+    )
+    try:
+        resp = client.run_report(req)
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(
+            f"GA4 Data API (cta_button breakdown) помилка: {e}. Якщо помилка про невідомий вимір "
+            f"'{dim_name}' — параметр не зареєстровано як custom dimension у GA4 Admin."
+        ) from e
+
+    out: dict[str, int] = {}
+    for row in resp.rows:
+        val = row.dimension_values[0].value.strip() or "(not set)"
+        out[val] = out.get(val, 0) + int(row.metric_values[0].value)
+    return dict(sorted(out.items(), key=lambda kv: -kv[1]))
+
+
+def fetch_ga4_metrics(start: dt.date, end: dt.date) -> dict[str, Any]:
+    property_id = require_env("GA4_PROPERTY_ID")
+    scroll_param = os.environ.get("GA4_SCROLL_DEPTH_PARAM", "depth_percent")
+    button_param = os.environ.get("GA4_CTA_BUTTON_PARAM", "cta_button")
+
+    client = ga4_client()
+    out: dict[str, Any] = {}
+    out.update(fetch_ga4_sessions_by_source(client, property_id, start, end))
+    out["site_visitors"] = fetch_ga4_site_visitors(client, property_id, start, end)
+    out.update(fetch_ga4_scroll_depth_yt(client, property_id, start, end, scroll_param))
+    out.update(fetch_ga4_funnel_yt(client, property_id, start, end))
+    out["ga_cta_buttons_yt"] = fetch_ga4_cta_buttons_yt(client, property_id, start, end, button_param)
+    return out
+
+
+def sanity_check_ga4(m: dict[str, Any], allow_zero_traffic: bool) -> None:
+    if m["ga_sessions_yt_total"] == 0 and not allow_zero_traffic:
+        raise SyncError(
+            "GA4: 0 сесій з YouTube (referral desktop+mobile, pinned_comment) за весь місяць. "
+            "Підозріло — швидше за все GA4_PROPERTY_ID неправильний, сервісний акаунт не має "
+            "доступу до property, або UTM-схема на сайті змінилась. Якщо це справді очікувано — "
+            "перезапусти з --allow-zero-traffic. Нічого не записано."
+        )
+
+
+# --------------------------------------------------------------------------
+# Google Sheet (через існуючий Apps Script Web App — той самий, що й index.html)
+# --------------------------------------------------------------------------
+
+def sheet_get_month(script_url: str, month_key: str) -> dict[str, Any]:
+    try:
+        r = requests.post(
+            f"{script_url}?action=getAll",
+            data=json.dumps({"action": "getAll"}),
+            headers={"Content-Type": "text/plain;charset=utf-8"},
+            timeout=30,
+        )
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(f"Не вдалось прочитати Sheet через Apps Script (getAll): {e}") from e
+    if "error" in data:
+        raise SyncError(f"Apps Script getAll повернув помилку: {data['error']}")
+    return dict(data.get("months", {}).get(month_key, {}))
+
+
+def sheet_save_month(script_url: str, month_key: str, data: dict[str, Any]) -> None:
+    try:
+        r = requests.post(
+            f"{script_url}?action=saveMonth",
+            data=json.dumps({"action": "saveMonth", "key": month_key, "data": data}),
+            headers={"Content-Type": "text/plain;charset=utf-8"},
+            timeout=30,
+        )
+        r.raise_for_status()
+        resp = r.json()
+    except Exception as e:  # noqa: BLE001
+        raise SyncError(f"Не вдалось записати в Sheet через Apps Script (saveMonth): {e}") from e
+    if not resp.get("ok"):
+        raise SyncError(f"Apps Script saveMonth повернув помилку: {resp}")
+
+
+# --------------------------------------------------------------------------
+# main
+# --------------------------------------------------------------------------
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="VR KINGS dashboard: YouTube + GA4 auto-sync")
+    p.add_argument("--month", help="YYYY-MM, дефолт — попередній календарний місяць")
+    p.add_argument("--dry-run", action="store_true", help="Порахувати й вивести в лог, нічого не писати в Sheet")
+    p.add_argument(
+        "--allow-zero-traffic",
+        action="store_true",
+        help="Не падати, якщо GA4 YouTube-трафік за місяць == 0 (типово це помилка налаштування)",
+    )
+    return p.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    month_key = args.month or previous_month_key()
+    start, end = month_bounds(month_key)
+    log.info("=== VR KINGS: YouTube + GA4 sync — %s (%s → %s) ===", month_key, start, end)
+
+    script_url = require_env("SCRIPT_URL")
+
+    log.info("Тягну YouTube Analytics...")
+    yt = fetch_youtube_metrics(start, end, month_key)
+    sanity_check_youtube(yt)
+    log.info(
+        "YouTube OK: views(video/shorts)=%s/%s subs_new=%s subs_total(now)=%s watch_h=%s "
+        "(impressions/CTR — ручні поля, не автоматизовано)",
+        yt["yt_views_video"], yt["yt_views_shorts"], yt["yt_subs_new"], yt["yt_subs_total"],
+        yt["yt_watch_hours"],
+    )
+
+    log.info("Тягну GA4...")
+    ga = fetch_ga4_metrics(start, end)
+    sanity_check_ga4(ga, args.allow_zero_traffic)
+    log.info(
+        "GA4 OK: sessions_yt_total=%s (desktop=%s mobile=%s pinned=%s) site_visitors=%s "
+        "funnel pageview→cta=%s→%s scroll25/50/75/100=%s/%s/%s/%s cta_buttons=%d варіантів",
+        ga["ga_sessions_yt_total"],
+        ga["ga_sessions_yt_referral_desktop"], ga["ga_sessions_yt_referral_mobile"], ga["ga_sessions_yt_pinned_comment"],
+        ga["site_visitors"], ga["ga_funnel_pageview_yt"], ga["ga_funnel_cta_click_yt"],
+        ga["ga_scroll_25_yt"], ga["ga_scroll_50_yt"], ga["ga_scroll_75_yt"], ga["ga_scroll_100_yt"],
+        len(ga["ga_cta_buttons_yt"]),
+    )
+
+    computed = {**yt, **ga}
+    computed["yt_views"] = yt["yt_views_video"] + yt["yt_views_shorts"]  # сумісність зі старим полем
+
+    if args.dry_run:
+        log.info("--dry-run: у Sheet нічого не записано. Обчислені значення:\n%s",
+                  json.dumps(computed, indent=2, ensure_ascii=False))
+        return 0
+
+    log.info("Читаю поточний запис Sheet для %s...", month_key)
+    current = sheet_get_month(script_url, month_key)
+    before = {k: current.get(k) for k in computed}
+    current.update(computed)
+    current["key"] = month_key
+    current["auto_sync"] = {
+        "at": dt.datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "period": {"start": start.isoformat(), "end": end.isoformat()},
+        "source": "sync_youtube_ga4.py",
+    }
+
+    log.info("Пишу об'єднаний запис у Sheet (key=%s)...", month_key)
+    sheet_save_month(script_url, month_key, current)
+
+    log.info("Готово. Змінені поля (було → стало):")
+    for k in sorted(computed):
+        if k == "ga_cta_buttons_yt":
+            continue
+        log.info("  %-30s %-12s -> %s", k, before.get(k), current.get(k))
+    log.info("  ga_cta_buttons_yt: %s", json.dumps(current["ga_cta_buttons_yt"], ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except SyncError as e:
+        log.error("СИНХРОНІЗАЦІЮ ЗУПИНЕНО: %s", e)
+        log.error("Старі значення в Sheet НЕ змінено.")
+        sys.exit(1)
