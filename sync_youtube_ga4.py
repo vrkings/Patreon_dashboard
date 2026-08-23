@@ -230,6 +230,11 @@ def fetch_youtube_metrics(start: dt.date, end: dt.date, month_key: str) -> dict[
     #    задачею через YouTube Reporting API, якщо знадобиться.
 
     # 3) Video vs Shorts розбивка
+    # --- DIAG: views=1130479 з basic metrics парситься правильно, але цей
+    # результат ("views") у return-словнику взагалі НЕ використовується —
+    # те, що фінально пишеться в yt_views_video/yt_views_shorts (і що читає
+    # sanity_check_youtube), береться ВИКЛЮЧНО з цього окремого запиту нижче.
+    # Якщо тут rows порожні/0 — саме тут і зникають реальні перегляди. ---
     try:
         by_type = yta.reports().query(
             ids=channel_ref,
@@ -241,6 +246,9 @@ def fetch_youtube_metrics(start: dt.date, end: dt.date, month_key: str) -> dict[
     except Exception as e:  # noqa: BLE001
         raise SyncError(f"YouTube Analytics API (creatorContentType) помилка: {e}") from e
 
+    log.info("DIAG: сира відповідь reports().query() (creatorContentType breakdown):\n%s",
+              json.dumps(by_type, ensure_ascii=False, indent=2))
+
     views_by_type = {"VIDEO": 0, "SHORTS": 0}
     subs_by_type = {"VIDEO": 0, "SHORTS": 0}
     for row in by_type.get("rows", []):
@@ -248,6 +256,29 @@ def fetch_youtube_metrics(start: dt.date, end: dt.date, month_key: str) -> dict[
         if ctype in views_by_type:
             views_by_type[ctype] += v
             subs_by_type[ctype] += sg
+        else:
+            log.warning(
+                "DIAG: рядок creatorContentType breakdown має значення ctype=%r, якого немає "
+                "в очікуваному наборі {'VIDEO','SHORTS'} (можливо LIVE_STREAM/STORY, чи інший "
+                "регістр літер) — цей рядок ПРОІГНОРОВАНО, його views/subs НЕ потрапили нікуди: "
+                "row=%r", ctype, row,
+            )
+
+    log.info(
+        "DIAG: після розбору creatorContentType → views_by_type=%s subs_by_type=%s "
+        "(basic 'views' з кроку 1 для порівняння: %s)",
+        views_by_type, subs_by_type, views,
+    )
+    if sum(views_by_type.values()) == 0 and views > 0:
+        log.error(
+            "DIAG: НЕЗБІЖНІСТЬ — basic metrics views=%s (>0), але сума по creatorContentType "
+            "breakdown = 0. Запит #3 (dimensions=creatorContentType) не повернув корисних рядків "
+            "для %s..%s, хоча запит #1 без цього виміру ті самі дані бачить нормально. Дивись "
+            "сиру відповідь запиту #3 вище — або rows порожні (сам вимір creatorContentType не "
+            "підтримується/не дає даних для цього каналу чи періоду), або ctype-значення в рядках "
+            "не збігаються з 'VIDEO'/'SHORTS' (див. WARNING вище, якщо був).",
+            views, start, end,
+        )
 
     # 4) Поточний total підписників (снепшот "зараз", не історичний — див. докстрінг)
     try:
@@ -560,6 +591,12 @@ def main() -> int:
 
     log.info("Тягну YouTube Analytics...")
     yt = fetch_youtube_metrics(start, end, month_key)
+    log.info(
+        "DIAG: точні значення, які зараз прочитає sanity_check_youtube() → "
+        "yt['yt_views_video']=%s yt['yt_views_shorts']=%s (сума=%s), yt['yt_subs_total']=%s",
+        yt["yt_views_video"], yt["yt_views_shorts"],
+        yt["yt_views_video"] + yt["yt_views_shorts"], yt["yt_subs_total"],
+    )
     sanity_check_youtube(yt)
     log.info(
         "YouTube OK: views(video/shorts)=%s/%s subs_new=%s subs_total(now)=%s watch_h=%s "
