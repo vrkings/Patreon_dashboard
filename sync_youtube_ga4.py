@@ -164,6 +164,19 @@ def fetch_youtube_metrics(start: dt.date, end: dt.date, month_key: str) -> dict[
     channel_id = require_env("YOUTUBE_CHANNEL_ID")
     channel_ref = f"channel=={channel_id}"
 
+    # --- ТИМЧАСОВЕ ДІАГНОСТИЧНЕ ЛОГУВАННЯ (0 переглядів за липень 2026, хоча
+    # реально було ~1.1 млн) — прибрати після знаходження причини. ---
+    log.info(
+        "DIAG: YOUTUBE_CHANNEL_ID=%r (len=%d) → ids parameter=%r",
+        channel_id, len(channel_id), channel_ref,
+    )
+    if channel_id != channel_id.strip():
+        log.warning(
+            "DIAG: YOUTUBE_CHANNEL_ID містить пробіли/переноси рядків на краях (%r) — "
+            "типова причина 'тихого нуля': секрет скопійовано з зайвим \\n в кінці.",
+            channel_id,
+        )
+
     # 1) Базові метрики: перегляди, watch time, підписники gained/lost
     try:
         basic = yta.reports().query(
@@ -175,12 +188,37 @@ def fetch_youtube_metrics(start: dt.date, end: dt.date, month_key: str) -> dict[
     except Exception as e:  # noqa: BLE001 — усе, що впало в API-виклику, фатальне для sync
         raise SyncError(f"YouTube Analytics API (basic metrics) помилка: {e}") from e
 
+    # DIAG: повна сира відповідь ДО будь-якого парсингу — щоб побачити,
+    # чи це справді 200 з порожніми/нульовими rows, чи там взагалі щось інше
+    # (наприклад columnHeaders є, а rows немає — типова ознака "запит валідний,
+    # але акаунту не видно даних цього каналу", тобто саме проблема прав/ролі).
+    log.info("DIAG: сира відповідь reports().query() (basic metrics):\n%s",
+              json.dumps(basic, ensure_ascii=False, indent=2))
+
     if not basic.get("rows"):
+        log.error(
+            "DIAG: rows відсутні або порожні. Якщо columnHeaders у відповіді вище ПРИСУТНІ "
+            "(запит прийнятий, помилки 403/400 не було) — це майже напевно НЕ проблема "
+            "channel_id, а проблема ПРАВ доступу: акаунт, чий OAuth-токен використовується, "
+            "доданий у YouTube Studio → Settings → Permissions з роллю 'Viewer' — а базова роль "
+            "Viewer сама по собі не вмикає доступ до Analytics-даних через YouTube Studio UI, "
+            "там є ОКРЕМИЙ перемикач 'Analytics' (розділ 'Advanced' при наданні доступу, або "
+            "секція permissions поруч з 'See channel-level analytics'), який міг бути НЕ увімкнений "
+            "коли роль видавали. Перевір: Studio → Settings → Permissions → знайти цей акаунт → "
+            "чи стоїть галочка саме на Analytics (не тільки базова роль Viewer/Manager/Editor). "
+            "Якщо галочки нема — став, збережи, і зачекай кілька хвилин перед повторним запуском."
+        )
         raise SyncError(
             f"YouTube Analytics API не повернув жодного рядка за {start}..{end}. "
-            "Скоріш за все неправильний YOUTUBE_CHANNEL_ID або немає доступу токена до цього каналу."
+            "Скоріш за все неправильний YOUTUBE_CHANNEL_ID або немає доступу токена до цього каналу "
+            "(див. DIAG-повідомлення вище в лозі — там конкретна діагностика)."
         )
     views, watched_min, subs_gained, subs_lost = basic["rows"][0]
+    log.info(
+        "DIAG: розпарсений рядок basic metrics → views=%s watched_min=%s subs_gained=%s subs_lost=%s",
+        views, watched_min, subs_gained, subs_lost,
+    )
+    # --- КІНЕЦЬ ТИМЧАСОВОГО ДІАГНОСТИЧНОГО ЛОГУВАННЯ ---
 
     # 2) Impressions / CTR — СВІДОМО НЕ АВТОМАТИЗОВАНО.
     #    videoThumbnailImpressions / videoThumbnailImpressionsClickRate — це не
