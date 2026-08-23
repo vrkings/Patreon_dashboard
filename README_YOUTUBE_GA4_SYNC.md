@@ -5,6 +5,14 @@ YouTube Analytics і GA4 дані за минулий місяць і пишут
 яким користується дашборд (через існуючий Apps Script Web App — `Code.gs` **не змінено**).
 Patreon-поля цей процес не чіпає.
 
+⚠️ **Impressions/CTR (`yt_impressions`, `yt_ctr`) НЕ автоматизовано — свідомо.** Ці метрики
+(`videoThumbnailImpressions`, `videoThumbnailImpressionsClickRate`) не доступні через простий
+`reports.query()`, яким побудований весь інший скрипт — вони є тільки через bulk **YouTube
+Reporting API** (створити job → зачекати генерацію звіту → скачати CSV), це окрема й значно
+важча механіка. Щоб не блокувати нею решту автоматики, ці два поля лишились **ручними** —
+такими ж, якими були до цієї задачі (вносиш у "Внести дані" як і раніше). Можна додати
+підтримку через YouTube Reporting API окремою задачею пізніше, якщо знадобиться.
+
 Нижче — усе, що треба зробити вручну ОДИН РАЗ, покроково.
 
 ---
@@ -153,7 +161,8 @@ Apps Script → Deploy → Manage deployments). Скопіюй цей URL у с�
 2. Відкрий лог запуску — там будуть підсумкові числа (`YouTube OK: ...`, `GA4 OK: ...`).
 3. Звір ці числа з реальністю:
    - **YouTube Studio → Analytics → Overview**, вибрати той самий місяць →
-     звірити перегляди, watch time, підписників, impressions/CTR.
+     звірити перегляди, watch time, підписників. (Impressions/CTR тут НЕ звіряти — це поле
+     й далі вноситься вручну, скрипт його не чіпає, див. примітку на початку файлу.)
    - **YouTube Studio → Analytics → Content → Shorts** вкладка — звірити Shorts-перегляди окремо.
    - **GA4 → Reports → Acquisition → Traffic acquisition**, фільтр по датах місяця →
      звірити сесії по `youtube.com/referral`, `m.youtube.com/referral`.
